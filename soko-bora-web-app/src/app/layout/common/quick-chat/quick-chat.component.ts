@@ -333,5 +333,38 @@ export class QuickChatComponent implements OnInit, AfterViewInit, OnDestroy
         return initialDate !== createdDate
 
     }
+    evaluateIsMineEqualValue(i: number, chat: any, message: any) :boolean {
+        // 'mt-0.5': i > 0 && chat.messages[i - 1].isMine === message.isMine,
+        const isMine = chat?.messages[i - 1]?.isMine
+
+        return i > 0 && isMine === message?.isMine;
+
+
+    }
+    evaluateIsMineNotEqualValue(i: number, chat: any, message: any) :boolean {
+        // 'mt-0.5': i > 0 && chat.messages[i - 1].isMine === message.isMine,
+        const isMine = chat?.messages[i - 1]?.isMine
+
+        return i > 0 && isMine !== message?.isMine;
+
+
+    }
+
+    evaluateNextIsMineNotEqualValue(i: number, chat: any, message: any) :boolean {
+        // chat.messages[i + 1].isMine !== message.isMine",
+        const isMine = chat?.messages[i + 1]?.isMine
+
+        return isMine !== message?.isMine;
+
+
+    }
+    evaluateNextCreatedAtNotEqualValue(i: number, chat: any, message: any) :boolean {
+        //  chat.messages[i + 1].createdAt !== message.createdAt"
+        const createdAt = chat?.messages[i + 1]?.createdAt
+
+        return createdAt !== message?.createdAt;
+
+
+    }
 
 }

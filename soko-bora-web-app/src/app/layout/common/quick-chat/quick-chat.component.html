@@ -110,15 +110,15 @@
                                         class="flex flex-col"
                                         [ngClass]="{'items-end': message.isMine,
                                                 'items-start': !message.isMine,
-                                                'mt-0.5': i > 0 && chat.messages[i - 1].isMine === message.isMine,
-                                                'mt-3': i > 0 && chat.messages[i - 1].isMine !== message.isMine}">
+                                                'mt-0.5': evaluateIsMineEqualValue(i, chat,message),
+                                                'mt-3': evaluateIsMineNotEqualValue(i, chat,message)}">
                                     <!-- Bubble -->
                                     <div
                                             class="relative max-w-3/4 px-3 py-2 rounded-lg"
                                             [ngClass]="{'bg-blue-500 text-blue-50': message.isMine,
                                                     'bg-gray-500 text-gray-50': !message.isMine}">
                                         <!-- Speech bubble tail -->
-                                        <ng-container *ngIf="last || chat.messages[i + 1].isMine !== message.isMine">
+                                        <ng-container *ngIf="last || evaluateNextIsMineNotEqualValue(i, chat,message)">
                                             <div
                                                     class="absolute bottom-0 w-3"
                                                     [ngClass]="{'text-blue-500 -right-1 -mr-px mb-px': message.isMine,
@@ -136,8 +136,8 @@
                                     <ng-container
                                             *ngIf="first
                                        || last
-                                       || chat.messages[i + 1].isMine !== message.isMine
-                                       || chat.messages[i + 1].createdAt !== message.createdAt">
+                                       || evaluateNextIsMineNotEqualValue(i, chat,message)
+                                       || evaluateNextCreatedAtNotEqualValue(i, chat,message)">
                                         <div
                                                 class="my-0.5 text-sm font-medium text-secondary"
                                                 [ngClass]="{'mr-3': message.isMine,
