@@ -32,16 +32,16 @@
                         <ng-container *ngIf="chat?.contact?.avatar">
                             <img
                                 class="w-full h-full rounded-full object-cover"
-                                [src]="chat?.contact?.avatar"
+                                [src]="chat.contact?.avatar"
                                 alt="Contact avatar"/>
                         </ng-container>
                         <ng-container *ngIf="!chat?.contact?.avatar">
                             <div class="flex items-center justify-center w-full h-full rounded-full text-lg uppercase bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                                {{chat?.contact?.name?.charAt(0)}}
+                                {{chat.contact?.name?.charAt(0)}}
                             </div>
                         </ng-container>
                     </div>
-                    <div class="ml-4 text-lg font-medium leading-5 truncate">{{chat?.contact?.name}}</div>
+                    <div class="ml-4 text-lg font-medium leading-5 truncate">{{chat.contact?.name}}</div>
                     <button
                         class="ml-auto mr-4"
                         mat-icon-button>
