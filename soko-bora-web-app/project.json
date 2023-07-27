@@ -3,7 +3,8 @@
   "$schema": "node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "prefix": "soko-bora-web-app",
-  "sourceRoot": "./src",
+  "root": "",
+  "sourceRoot": "src",
   "tags": [],
   "targets": {
     "build": {
@@ -15,8 +16,39 @@
         "main": "./src/main.ts",
         "polyfills": ["zone.js"],
         "tsConfig": "./tsconfig.app.json",
-        "assets": ["./src/favicon.ico", "./src/assets"],
-        "styles": ["./src/styles.css"],
+        "inlineStyleLanguage": "scss",
+        "allowedCommonJsDependencies": [
+          "apexcharts",
+          "highlight.js",
+          "crypto-js/enc-utf8",
+          "crypto-js/hmac-sha256",
+          "crypto-js/enc-base64",
+          "flat",
+          "quill"
+        ],
+        "assets": [
+          "src/favicon-16x16.png",
+          "src/favicon-32x32.png",
+          "src/assets",
+          {
+            "glob": "_redirects",
+            "input": "src",
+            "output": "/"
+          }
+        ],
+        "stylePreprocessorOptions": {
+          "includePaths": [
+            "src/@fuse/styles"
+          ]
+        },
+        "styles": [
+          "src/@fuse/styles/tailwind.scss",
+          "src/@fuse/styles/themes.scss",
+          "src/styles/vendors.scss",
+          "src/@fuse/styles/main.scss",
+          "src/styles/styles.scss",
+          "src/styles/tailwind.scss"
+        ],
         "scripts": []
       },
       "configurations": {
@@ -24,13 +56,13 @@
           "budgets": [
             {
               "type": "initial",
-              "maximumWarning": "500kb",
-              "maximumError": "1mb"
+              "maximumWarning": "3mb",
+              "maximumError": "5mb"
             },
             {
               "type": "anyComponentStyle",
-              "maximumWarning": "2kb",
-              "maximumError": "4kb"
+              "maximumWarning": "75kb",
+              "maximumError": "90kb"
             }
           ],
           "outputHashing": "all"
