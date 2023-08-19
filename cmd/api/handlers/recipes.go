@@ -133,11 +133,11 @@ func (handler *RecipesHandler) UpdateRecipeHandler(c *gin.Context) {
 	objectId, _ := primitive.ObjectIDFromHex(id)
 	_, err := handler.collection.UpdateOne(handler.ctx, bson.M{
 		"_id": objectId,
-	}, bson.D{{"$set", bson.D{
-		{"name", recipe.Name},
-		{"instructions", recipe.Instructions},
-		{"ingredients", recipe.Ingredients},
-		{"tags", recipe.Tags},
+	}, bson.D{{Key: "$set", Value: bson.D{
+		{Key: "name", Value: recipe.Name},
+		{Key: "instructions", Value: recipe.Instructions},
+		{Key: "ingredients", Value: recipe.Ingredients},
+		{Key: "tags", Value: recipe.Tags},
 	}}})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
