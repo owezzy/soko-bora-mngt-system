@@ -184,3 +184,4 @@ e2e/*.map
 .DS_Store/
 
 .envrc
+.idea
