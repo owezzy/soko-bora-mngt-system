@@ -23,3 +23,9 @@ confirm:
 .PHONY: run/api
 run/api:
 	JWT_SECRET=${JWT_SECRET} MONGO_URI=${MONGO_URI} MONGO_DATABASE=${MONGO_DATABASE} go run ./cmd/api/*.go
+
+generate-open-api-doc:
+	swagger generate spec -o ./swagger.json
+
+serve-open-api-doc:
+	swagger serve --flavor=swagger ./swagger.json
