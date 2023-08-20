@@ -7,6 +7,11 @@
 //	BasePath: /
 //	Version: 1.0.0
 //	Contact: Owen Adirah <owenadira@gmail.com> https://owezzy.tech
+//  SecurityDefinitions:
+//  api_key:
+//    type: apiKey
+//    name: Authorization
+//    in: header
 //
 //	Consumes:
 //	- application/json
