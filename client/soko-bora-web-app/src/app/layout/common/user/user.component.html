@@ -5,8 +5,8 @@
     <span class="relative">
         <img
             class="w-7 h-7 rounded-full"
-            *ngIf="showAvatar && user.avatar"
-            [src]="user.avatar">
+            *ngIf="showAvatar && user.picture"
+            [src]="user.picture">
         <mat-icon
             *ngIf="!showAvatar || !user.avatar"
             [svgIcon]="'heroicons_outline:user-circle'"></mat-icon>
@@ -18,6 +18,7 @@
                           'bg-red-500': user.status === 'busy',
                           'bg-gray-400': user.status === 'not-visible'}"
         ></span>
+
     </span>
 </button>
 
