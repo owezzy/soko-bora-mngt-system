@@ -20,8 +20,7 @@
       "extends": [
         "plugin:@nx/typescript",
         "plugin:@nx/angular",
-        "plugin:@angular-eslint/ng-cli-compat",
-        "plugin:@angular-eslint/ng-cli-compat--formatting-add-on",
+        "plugin:@angular-eslint/recommended",
         "plugin:@angular-eslint/template/process-inline-templates"
       ],
       "rules": {
@@ -41,6 +40,7 @@
             "style": "kebab-case"
           }
         ],
+        "@typescript-eslint/ban-ts-comment": "off",
         "@typescript-eslint/dot-notation": "off",
         "@typescript-eslint/explicit-function-return-type": "error",
         "@typescript-eslint/explicit-member-accessibility": [
