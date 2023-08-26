@@ -345,19 +345,6 @@
   resolved "https://registry.yarnpkg.com/@assemblyscript/loader/-/loader-0.10.1.tgz#70e45678f06c72fa2e350e8553ec4a4d72b92e06"
   integrity sha512-H71nDOOL8Y7kWRLqf6Sums+01Q5msqBW2KhDUTemh1tvY04eSkSXrK0uj/4mmY0Xr16/3zyZmsrxN7CKuRbNRg==
 
-"@auth0/auth0-angular@^2.2.1":
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/@auth0/auth0-angular/-/auth0-angular-2.2.1.tgz#d0b598c62584276ec4d694835a16dac62f47303c"
-  integrity sha512-ie9CMNOdQ3mkhhe09SEporCayDuuPYHNmctyHeV6caVgZVSSu9FlFt2ec6CkX27ufDq7yCdyJGnDixWxNtUG+Q==
-  dependencies:
-    "@auth0/auth0-spa-js" "^2.0.1"
-    tslib "^2.0.0"
-
-"@auth0/auth0-spa-js@^2.0.1":
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/@auth0/auth0-spa-js/-/auth0-spa-js-2.1.2.tgz#2217db13ce0feb480a190ed165b36681bd48633c"
-  integrity sha512-xdA65Z/U7++Y7L9Uwh8Q8OVOs6qgFz+fb7GAzHFjpr1icO37B//xdzLXm7ZRgA19RWrsNe1nme3h896igJSvvw==
-
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.12.13", "@babel/code-frame@^7.16.7", "@babel/code-frame@^7.22.5":
   version "7.22.5"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.22.5.tgz#234d98e1551960604f1246e6475891a570ad5658"
@@ -8814,10 +8801,10 @@ ng-apexcharts@1.7.4:
   dependencies:
     tslib "^2.0.0"
 
-ngx-quill@22.0.0:
-  version "22.0.0"
-  resolved "https://registry.yarnpkg.com/ngx-quill/-/ngx-quill-22.0.0.tgz#845493fe020ede5566fa7a20c8e38e65fcba13d6"
-  integrity sha512-+MDP3kh/LN1GTZVYbqKxbtlx7y0ahfICLbJckj9/wItQQJSuQZJBwr6B1CntoINu36x79b7MhpSqMGHQsyxL4A==
+ngx-quill@20.0.1:
+  version "20.0.1"
+  resolved "https://registry.yarnpkg.com/ngx-quill/-/ngx-quill-20.0.1.tgz#b27f6f8b3302115cc316d53a19c7c89fade3a94e"
+  integrity sha512-X02Me3RYuQgoOHXzYrkdi4aaDHPkyTZTUib+2amKxAMpM9LEOh/QYrFjudreQJtih6rhV6kRorO5AS4UueX9Mw==
   dependencies:
     tslib "^2.3.0"
 
