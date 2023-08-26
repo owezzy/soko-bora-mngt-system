@@ -3,6 +3,8 @@ import { AuthGuard } from 'app/core/auth/guards/auth.guard';
 import { NoAuthGuard } from 'app/core/auth/guards/noAuth.guard';
 import { LayoutComponent } from 'app/layout/layout.component';
 import { InitialDataResolver } from 'app/app.resolvers';
+import {AuthGuard as Auth0Guard} from '@auth0/auth0-angular';
+
 
 // @formatter:off
 /* eslint-disable max-len */
@@ -28,6 +30,7 @@ export const appRoutes: Route[] = [
             layout: 'empty'
         },
         children: [
+            {path: 'auth0-sign-in', loadChildren: () => import('app/modules/auth/auth0/auth0.module').then(m => m.Auth0Module)},
             {path: 'confirmation-required', loadChildren: () => import('app/modules/auth/confirmation-required/confirmation-required.module').then(m => m.AuthConfirmationRequiredModule)},
             {path: 'forgot-password', loadChildren: () => import('app/modules/auth/forgot-password/forgot-password.module').then(m => m.AuthForgotPasswordModule)},
             {path: 'reset-password', loadChildren: () => import('app/modules/auth/reset-password/reset-password.module').then(m => m.AuthResetPasswordModule)},
@@ -39,7 +42,7 @@ export const appRoutes: Route[] = [
     // Auth routes for authenticated users
     {
         path: '',
-        canMatch: [AuthGuard],
+        canActivate: [Auth0Guard],
         component: LayoutComponent,
         data: {
             layout: 'empty'
@@ -65,7 +68,7 @@ export const appRoutes: Route[] = [
     // Admin routes
     {
         path: '',
-        canMatch: [AuthGuard],
+        canActivate: [Auth0Guard],
         component: LayoutComponent,
         resolve: {
             initialData: InitialDataResolver,
