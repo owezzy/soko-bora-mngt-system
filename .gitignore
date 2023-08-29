@@ -182,7 +182,9 @@ e2e/*.map
 
 # System Files
 .DS_Store/
-client/.DS_Store/
+/.DS_Store
+client/.DS_Store
 
 .envrc
+.idea.DS_Store
 .idea
