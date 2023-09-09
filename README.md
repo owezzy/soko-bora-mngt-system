@@ -84,8 +84,10 @@ Here's a blank template to get started: To avoid retyping too much info. Do a se
 ### Built With
 
 * [![Angular][Angular.io]][Angular-url]
-
-* [![GitHub go.mod Go version of a Go module](https://img.shields.io/github/go-mod/go-version/gomods/athens.svg)](https://github.com/gomods/athens)
+* [![Golang]][Golang-url]
+* [![Graphql]][Graphql-url]
+* [![aws]][aws-url]
+* [![Git]][git]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -207,3 +209,14 @@ Project Link: [https://github.com/owezzy/soko-bora-mngt-system](https://github.c
 [product-screenshot]: internal/assets/High-level-application-components-view.png
 [Angular.io]: https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white
 [Angular-url]: https://angular.io/
+[Golang]: https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white
+[Golang-url]: https://go.dev/
+
+[GraphQL]: https://img.shields.io/badge/-GraphQL-E10098?style=for-the-badge&logo=graphql&logoColor=white
+[Graphql-url]: https://graphql.org/
+
+[aws]: https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white
+[aws-url]: https://aws.amazon.com/
+
+[Git]: https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white
+[git]: https://github.com/
