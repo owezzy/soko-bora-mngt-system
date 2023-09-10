@@ -30,7 +30,9 @@ generate-open-api-doc:
 serve-open-api-doc:
 	swagger serve --flavor=swagger ./swagger.json
 
-install-tools:
+
+.PHONY: run/install-tools
+run/install-tools:
 	@echo installing tools && \
 	@go install \
 	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \

@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis"
-	"github.com/owezzy/soko-bora-mngt-system/internal/models"
+	"github.com/owezzy/soko-bora-mngt-system/cmd/api/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
