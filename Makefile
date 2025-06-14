@@ -1,4 +1,4 @@
-
+include docker/.env
 
 # ==================================================================================== #
 # HELPERS
@@ -23,12 +23,11 @@ confirm:
 run/api:
 	go run ./cmd/mallbots/main.go
 
-generate-open-api-doc:
-	swagger generate spec -o ./swagger.json
 
-serve-open-api-doc:
-	swagger serve --flavor=swagger ./swagger.json
-
+# Stop everything and remove volumes
+.PHONY: run/api
+clean-up-monolith:
+	docker-compose down -v
 
 .PHONY: run/install-tools
 install-tools:

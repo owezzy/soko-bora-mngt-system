@@ -540,7 +540,6 @@
         "details": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }
@@ -588,7 +587,6 @@
         "products": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/storespbProduct"
           }
         }
@@ -600,7 +598,6 @@
         "stores": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/storespbStore"
           }
         }
@@ -628,7 +625,6 @@
         "stores": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/storespbStore"
           }
         }

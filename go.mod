@@ -1,8 +1,6 @@
 module github.com/owezzy/soko-bora-mngt-system
 
-go 1.23.0
-
-toolchain go1.24.3
+go 1.23
 
 require (
 	github.com/cucumber/godog v0.12.5
