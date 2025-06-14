@@ -1,5 +1,4 @@
-# Include variables from the .envrc file
-include .envrc
+
 
 # ==================================================================================== #
 # HELPERS
@@ -22,7 +21,7 @@ confirm:
 ## run/api: run the cmd/api application
 .PHONY: run/api
 run/api:
-	JWT_SECRET=${JWT_SECRET} MONGO_URI=${MONGO_URI} MONGO_DATABASE=${MONGO_DATABASE} go run ./cmd/api/*.go
+	go run ./cmd/mallbots/main.go
 
 generate-open-api-doc:
 	swagger generate spec -o ./swagger.json
@@ -32,9 +31,9 @@ serve-open-api-doc:
 
 
 .PHONY: run/install-tools
-run/install-tools:
+install-tools:
 	@echo installing tools && \
-	@go install \
+	go install \
 	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
 	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
 	google.golang.org/protobuf/cmd/protoc-gen-go \

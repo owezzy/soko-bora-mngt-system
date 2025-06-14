@@ -5,45 +5,78 @@ import (
 	"sync"
 )
 
-type EventSubscriber interface {
-	Subscribe(event Event, handler EventHandler)
-}
+type (
+	EventHandler[T Event] interface {
+		HandleEvent(ctx context.Context, event T) error
+	}
 
-type EventPublisher interface {
-	Publish(ctx context.Context, events ...Event) error
-}
+	EventHandlerFunc[T Event] func(ctx context.Context, event T) error
 
-type EventDispatcher struct {
-	handlers map[string][]EventHandler
-	mu       sync.Mutex
-}
+	EventSubscriber[T Event] interface {
+		Subscribe(handler EventHandler[T], events ...string)
+	}
+
+	EventPublisher[T Event] interface {
+		Publish(ctx context.Context, events ...T) error
+	}
+
+	EventDispatcher[T Event] struct {
+		handlers []eventHandler[T]
+		mu       sync.Mutex
+	}
+
+	eventHandler[T Event] struct {
+		h       EventHandler[T]
+		filters map[string]struct{}
+	}
+)
 
 var _ interface {
-	EventSubscriber
-	EventPublisher
-} = (*EventDispatcher)(nil)
+	EventSubscriber[Event]
+	EventPublisher[Event]
+} = (*EventDispatcher[Event])(nil)
 
-func NewEventDispatcher() *EventDispatcher {
-	return &EventDispatcher{
-		handlers: make(map[string][]EventHandler),
+func NewEventDispatcher[T Event]() *EventDispatcher[T] {
+	return &EventDispatcher[T]{
+		handlers: make([]eventHandler[T], 0),
 	}
 }
 
-func (h *EventDispatcher) Subscribe(event Event, handler EventHandler) {
+func (h *EventDispatcher[T]) Subscribe(handler EventHandler[T], events ...string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	h.handlers[event.EventName()] = append(h.handlers[event.EventName()], handler)
+	var filters map[string]struct{}
+	if len(events) > 0 {
+		filters = make(map[string]struct{})
+		for _, event := range events {
+			filters[event] = struct{}{}
+		}
+	}
+
+	h.handlers = append(h.handlers, eventHandler[T]{
+		h:       handler,
+		filters: filters,
+	})
 }
 
-func (h *EventDispatcher) Publish(ctx context.Context, events ...Event) error {
+func (h *EventDispatcher[T]) Publish(ctx context.Context, events ...T) error {
 	for _, event := range events {
-		for _, handler := range h.handlers[event.EventName()] {
-			err := handler(ctx, event)
+		for _, handler := range h.handlers {
+			if handler.filters != nil {
+				if _, exists := handler.filters[event.EventName()]; !exists {
+					continue
+				}
+			}
+			err := handler.h.HandleEvent(ctx, event)
 			if err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func (f EventHandlerFunc[T]) HandleEvent(ctx context.Context, event T) error {
+	return f(ctx, event)
 }
