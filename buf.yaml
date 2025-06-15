@@ -27,6 +27,6 @@ breaking:
 deps:
   - buf.build/google/googleapis
   - buf.build/grpc/grpc
-  - buf.build/connectrpc/es:v1.4.0
+  - buf.build/connectrpc/es
   - buf.build/bufbuild/es
-  - buf.build/connectrpc/go:v1.16.2
+  - buf.build/connectrpc/go

@@ -33,15 +33,13 @@ plugins:
       - paths=source_relative
   # connect web
   - remote: buf.build/connectrpc/es
-    out: client/soko-bora-web-app/src/proto
+    out: ../client/soko-bora-web-app/src/proto
     opt:
       - target=ts
       - import_extension=.ts
-      - paths=import
   # dependencies
   - remote: buf.build/bufbuild/es
-    out: client/soko-bora-web-app/src/proto
+    out: ../client/soko-bora-web-app/src/proto
     opt:
       - target=ts
       - import_extension=.ts
-      - paths=import
