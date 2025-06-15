@@ -1,9 +1,10 @@
 package domain
 
 import (
+	"github.com/stackus/errors"
+
 	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
 	"github.com/owezzy/soko-bora-mngt-system/internal/es"
-	"github.com/stackus/errors"
 )
 
 const BasketAggregate = "baskets.Basket"
@@ -37,26 +38,6 @@ func NewBasket(id string) *Basket {
 		Items:     make(map[string]Item),
 	}
 }
-
-func StartBasket(id, customerID string) (*Basket, error) {
-	if id == "" {
-		return nil, ErrBasketIDCannotBeBlank
-	}
-
-	if customerID == "" {
-		return nil, ErrCustomerIDCannotBeBlank
-	}
-
-	basket := NewBasket(id)
-
-	basket.AddEvent(BasketStartedEvent, &BasketStarted{
-		CustomerID: customerID,
-	})
-
-	return basket, nil
-}
-
-func (Basket) Key() string { return BasketAggregate }
 
 func (b *Basket) Start(customerID string) (ddd.Event, error) {
 	if b.Status != BasketUnknown {
