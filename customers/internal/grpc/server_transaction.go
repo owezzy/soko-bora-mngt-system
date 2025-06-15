@@ -8,6 +8,7 @@ import (
 
 	"github.com/owezzy/soko-bora-mngt-system/customers/customerspb"
 	"github.com/owezzy/soko-bora-mngt-system/customers/internal/application"
+	"github.com/owezzy/soko-bora-mngt-system/customers/internal/constants"
 	"github.com/owezzy/soko-bora-mngt-system/internal/di"
 )
 
@@ -29,9 +30,9 @@ func (s serverTx) RegisterCustomer(ctx context.Context, request *customerspb.Reg
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.RegisterCustomer(ctx, request)
 }
@@ -40,9 +41,9 @@ func (s serverTx) AuthorizeCustomer(ctx context.Context, request *customerspb.Au
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.AuthorizeCustomer(ctx, request)
 }
@@ -51,9 +52,9 @@ func (s serverTx) GetCustomer(ctx context.Context, request *customerspb.GetCusto
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.GetCustomer(ctx, request)
 }
@@ -62,9 +63,9 @@ func (s serverTx) EnableCustomer(ctx context.Context, request *customerspb.Enabl
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.EnableCustomer(ctx, request)
 }
@@ -73,9 +74,9 @@ func (s serverTx) DisableCustomer(ctx context.Context, request *customerspb.Disa
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.DisableCustomer(ctx, request)
 }
