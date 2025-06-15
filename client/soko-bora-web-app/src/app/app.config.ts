@@ -1,22 +1,19 @@
-import { provideHttpClient } from '@angular/common/http';
-import {
-    ApplicationConfig,
-    inject,
-    isDevMode,
-    provideAppInitializer,
-} from '@angular/core';
-import { LuxonDateAdapter } from '@angular/material-luxon-adapter';
-import { DateAdapter, MAT_DATE_FORMATS } from '@angular/material/core';
-import { provideAnimations } from '@angular/platform-browser/animations';
-import { provideRouter, withInMemoryScrolling } from '@angular/router';
-import { provideFuse } from '@fuse';
-import { TranslocoService, provideTransloco } from '@jsverse/transloco';
-import { appRoutes } from 'app/app.routes';
-import { provideAuth } from 'app/core/auth/auth.provider';
-import { provideIcons } from 'app/core/icons/icons.provider';
-import { MockApiService } from 'app/mock-api';
-import { firstValueFrom } from 'rxjs';
-import { TranslocoHttpLoader } from './core/transloco/transloco.http-loader';
+import {provideHttpClient} from '@angular/common/http';
+import {ApplicationConfig, inject, isDevMode, provideAppInitializer,} from '@angular/core';
+import {LuxonDateAdapter} from '@angular/material-luxon-adapter';
+import {DateAdapter, MAT_DATE_FORMATS} from '@angular/material/core';
+import {provideAnimations} from '@angular/platform-browser/animations';
+import {provideRouter, withInMemoryScrolling} from '@angular/router';
+import {provideFuse} from '@fuse';
+import {provideTransloco, TranslocoService} from '@jsverse/transloco';
+import {appRoutes} from 'app/app.routes';
+import {provideAuth} from 'app/core/auth/auth.provider';
+import {provideIcons} from 'app/core/icons/icons.provider';
+import {MockApiService} from 'app/mock-api';
+import {firstValueFrom} from 'rxjs';
+import {TranslocoHttpLoader} from './core/transloco/transloco.http-loader';
+import {provideConnect} from "../connect/connect.module";
+import {provideProtractorTestingSupport} from "@angular/platform-browser";
 
 export const appConfig: ApplicationConfig = {
     providers: [
@@ -26,6 +23,11 @@ export const appConfig: ApplicationConfig = {
             appRoutes,
             withInMemoryScrolling({ scrollPositionRestoration: 'enabled' })
         ),
+        // connect to GRPC setup
+        provideConnect({
+            baseUrl: "http://localhost:8080",
+        }),
+        provideProtractorTestingSupport(),
 
         // Material Date Adapter
         {
