@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/owezzy/soko-bora-mngt-system/depot/depotpb"
 	"github.com/owezzy/soko-bora-mngt-system/depot/internal/application"
+	"github.com/owezzy/soko-bora-mngt-system/depot/internal/constants"
 	"github.com/owezzy/soko-bora-mngt-system/internal/di"
 
 	"google.golang.org/grpc"
@@ -28,9 +29,9 @@ func (s serverTx) CreateShoppingList(ctx context.Context, request *depotpb.Creat
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.CreateShoppingList(ctx, request)
 }
@@ -39,9 +40,9 @@ func (s serverTx) CancelShoppingList(ctx context.Context, request *depotpb.Cance
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.CancelShoppingList(ctx, request)
 }
@@ -50,9 +51,9 @@ func (s serverTx) AssignShoppingList(ctx context.Context, request *depotpb.Assig
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.AssignShoppingList(ctx, request)
 }
@@ -61,9 +62,9 @@ func (s serverTx) CompleteShoppingList(ctx context.Context, request *depotpb.Com
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.CompleteShoppingList(ctx, request)
 }

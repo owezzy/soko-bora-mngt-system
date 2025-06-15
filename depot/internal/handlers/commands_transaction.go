@@ -3,14 +3,13 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"github.com/owezzy/soko-bora-mngt-system/depot/internal/constants"
 	"github.com/owezzy/soko-bora-mngt-system/internal/am"
-	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
 	"github.com/owezzy/soko-bora-mngt-system/internal/di"
-	"github.com/owezzy/soko-bora-mngt-system/internal/registry"
 )
 
 func RegisterCommandHandlersTx(container di.Container) error {
-	cmdMsgHandlers := am.RawMessageHandlerFunc(func(ctx context.Context, msg am.IncomingRawMessage) (err error) {
+	rawMsgHandler := am.MessageHandlerFunc(func(ctx context.Context, msg am.IncomingMessage) (err error) {
 		ctx = container.Scoped(ctx)
 		defer func(tx *sql.Tx) {
 			if p := recover(); p != nil {
@@ -21,21 +20,12 @@ func RegisterCommandHandlersTx(container di.Container) error {
 			} else {
 				err = tx.Commit()
 			}
-		}(di.Get(ctx, "tx").(*sql.Tx))
+		}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-		cmdMsgHandlers := am.RawMessageHandlerWithMiddleware(
-			am.NewCommandMessageHandler(
-				di.Get(ctx, "registry").(registry.Registry),
-				di.Get(ctx, "replyStream").(am.ReplyStream),
-				di.Get(ctx, "commandHandlers").(ddd.CommandHandler[ddd.Command]),
-			).(am.RawMessageHandler),
-			di.Get(ctx, "inboxMiddleware").(am.RawMessageHandlerMiddleware),
-		)
-
-		return cmdMsgHandlers.HandleMessage(ctx, msg)
+		return di.Get(ctx, constants.CommandHandlersKey).(am.MessageHandler).HandleMessage(ctx, msg)
 	})
 
-	subscriber := container.Get("stream").(am.RawMessageStream)
+	subscriber := container.Get(constants.MessageSubscriberKey).(am.MessageSubscriber)
 
-	return RegisterCommandHandlers(subscriber, cmdMsgHandlers)
+	return RegisterCommandHandlers(subscriber, rawMsgHandler)
 }
