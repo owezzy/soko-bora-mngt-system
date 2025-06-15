@@ -19,8 +19,8 @@ confirm:
 # DEVELOPMENT
 # ==================================================================================== #
 
-## run/api: run the cmd/api application
-.PHONY: run/api
+## soko-bora: run the cmd/mallbots application
+.PHONY: soko-bora
 soko-bora:
 	docker compose --profile monolith up
 

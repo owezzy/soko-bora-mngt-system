@@ -7,20 +7,23 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/owezzy/soko-bora-mngt-system/internal/am"
+	"github.com/owezzy/soko-bora-mngt-system/internal/amotel"
+	"github.com/owezzy/soko-bora-mngt-system/internal/amprom"
 	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
 	"github.com/owezzy/soko-bora-mngt-system/internal/di"
 	"github.com/owezzy/soko-bora-mngt-system/internal/es"
 	"github.com/owezzy/soko-bora-mngt-system/internal/jetstream"
-	"github.com/owezzy/soko-bora-mngt-system/internal/monolith"
 	pg "github.com/owezzy/soko-bora-mngt-system/internal/postgres"
+	"github.com/owezzy/soko-bora-mngt-system/internal/postgresotel"
 	"github.com/owezzy/soko-bora-mngt-system/internal/registry"
 	"github.com/owezzy/soko-bora-mngt-system/internal/registry/serdes"
+	"github.com/owezzy/soko-bora-mngt-system/internal/system"
 	"github.com/owezzy/soko-bora-mngt-system/internal/tm"
 	"github.com/owezzy/soko-bora-mngt-system/stores/internal/application"
+	"github.com/owezzy/soko-bora-mngt-system/stores/internal/constants"
 	"github.com/owezzy/soko-bora-mngt-system/stores/internal/domain"
 	"github.com/owezzy/soko-bora-mngt-system/stores/internal/grpc"
 	"github.com/owezzy/soko-bora-mngt-system/stores/internal/handlers"
-	"github.com/owezzy/soko-bora-mngt-system/stores/internal/logging"
 	"github.com/owezzy/soko-bora-mngt-system/stores/internal/postgres"
 	"github.com/owezzy/soko-bora-mngt-system/stores/internal/rest"
 	"github.com/owezzy/soko-bora-mngt-system/stores/storespb"
@@ -29,10 +32,14 @@ import (
 type Module struct {
 }
 
-func (m *Module) Startup(ctx context.Context, mono monolith.Monolith) (err error) {
+func (m *Module) Startup(ctx context.Context, mono system.Service) (err error) {
+	return Root(ctx, mono)
+}
+
+func Root(ctx context.Context, svc system.Service) (err error) {
 	container := di.New()
 	// setup Driven adapters
-	container.AddSingleton("registry", func(c di.Container) (any, error) {
+	container.AddSingleton(constants.RegistryKey, func(c di.Container) (any, error) {
 		reg := registry.New()
 		if err := registrations(reg); err != nil {
 			return nil, err
@@ -42,117 +49,117 @@ func (m *Module) Startup(ctx context.Context, mono monolith.Monolith) (err error
 		}
 		return reg, nil
 	})
-	container.AddSingleton("logger", func(c di.Container) (any, error) {
-		return mono.Logger(), nil
+	stream := jetstream.NewStream(svc.Config().Nats.Stream, svc.JS(), svc.Logger())
+	container.AddSingleton(constants.DomainDispatcherKey, func(c di.Container) (any, error) {
+		return ddd.NewEventDispatcher[ddd.Event](), nil
 	})
-	container.AddSingleton("stream", func(c di.Container) (any, error) {
-		return jetstream.NewStream(mono.Config().Nats.Stream, mono.JS(), c.Get("logger").(zerolog.Logger)), nil
+	container.AddScoped(constants.DatabaseTransactionKey, func(c di.Container) (any, error) {
+		return svc.DB().Begin()
 	})
-	container.AddSingleton("domainDispatcher", func(c di.Container) (any, error) {
-		return ddd.NewEventDispatcher[ddd.AggregateEvent](), nil
-	})
-	container.AddSingleton("db", func(c di.Container) (any, error) {
-		return mono.DB(), nil
-	})
-	container.AddSingleton("outboxProcessor", func(c di.Container) (any, error) {
-		return tm.NewOutboxProcessor(
-			c.Get("stream").(am.RawMessageStream),
-			pg.NewOutboxStore("stores.outbox", c.Get("db").(*sql.DB)),
+	sentCounter := amprom.SentMessagesCounter(constants.ServiceName)
+	container.AddScoped(constants.MessagePublisherKey, func(c di.Container) (any, error) {
+		tx := postgresotel.Trace(c.Get(constants.DatabaseTransactionKey).(*sql.Tx))
+		outboxStore := pg.NewOutboxStore(constants.OutboxTableName, tx)
+		return am.NewMessagePublisher(
+			stream,
+			amotel.OtelMessageContextInjector(),
+			sentCounter,
+			tm.OutboxPublisher(outboxStore),
 		), nil
 	})
-	container.AddScoped("tx", func(c di.Container) (any, error) {
-		db := c.Get("db").(*sql.DB)
-		return db.Begin()
-	})
-	container.AddScoped("txStream", func(c di.Container) (any, error) {
-		tx := c.Get("tx").(*sql.Tx)
-		outboxStore := pg.NewOutboxStore("stores.outbox", tx)
-		return am.RawMessageStreamWithMiddleware(
-			c.Get("stream").(am.RawMessageStream),
-			tm.NewOutboxStreamMiddleware(outboxStore),
+	container.AddSingleton(constants.MessageSubscriberKey, func(c di.Container) (any, error) {
+		return am.NewMessageSubscriber(
+			stream,
+			amotel.OtelMessageContextExtractor(),
+			amprom.ReceivedMessagesCounter(constants.ServiceName),
 		), nil
 	})
-	container.AddScoped("eventStream", func(c di.Container) (any, error) {
-		return am.NewEventStream(c.Get("registry").(registry.Registry), c.Get("txStream").(am.RawMessageStream)), nil
+	container.AddScoped(constants.EventPublisherKey, func(c di.Container) (any, error) {
+		return am.NewEventPublisher(
+			c.Get(constants.RegistryKey).(registry.Registry),
+			c.Get(constants.MessagePublisherKey).(am.MessagePublisher),
+		), nil
 	})
-	container.AddScoped("aggregateStore", func(c di.Container) (any, error) {
-		tx := c.Get("tx").(*sql.Tx)
-		reg := c.Get("registry").(registry.Registry)
+	container.AddScoped(constants.InboxStoreKey, func(c di.Container) (any, error) {
+		tx := postgresotel.Trace(c.Get(constants.DatabaseTransactionKey).(*sql.Tx))
+		return pg.NewInboxStore(constants.InboxTableName, tx), nil
+	})
+	container.AddScoped(constants.AggregateStoreKey, func(c di.Container) (any, error) {
+		tx := postgresotel.Trace(c.Get(constants.DatabaseTransactionKey).(*sql.Tx))
+		reg := c.Get(constants.RegistryKey).(registry.Registry)
 		return es.AggregateStoreWithMiddleware(
-			pg.NewEventStore("stores.events", tx, reg),
-			es.NewEventPublisher(c.Get("domainDispatcher").(*ddd.EventDispatcher[ddd.AggregateEvent])),
-			pg.NewSnapshotStore("stores.snapshots", tx, reg),
+			pg.NewEventStore(constants.EventsTableName, tx, reg),
+			pg.NewSnapshotStore(constants.SnapshotsTableName, tx, reg),
 		), nil
 	})
-	container.AddScoped("stores", func(c di.Container) (any, error) {
+	container.AddScoped(constants.StoresRepoKey, func(c di.Container) (any, error) {
 		return es.NewAggregateRepository[*domain.Store](
 			domain.StoreAggregate,
-			c.Get("registry").(registry.Registry),
-			c.Get("aggregateStore").(es.AggregateStore),
+			c.Get(constants.RegistryKey).(registry.Registry),
+			c.Get(constants.AggregateStoreKey).(es.AggregateStore),
 		), nil
 	})
-	container.AddScoped("products", func(c di.Container) (any, error) {
+	container.AddScoped(constants.ProductsRepoKey, func(c di.Container) (any, error) {
 		return es.NewAggregateRepository[*domain.Product](
 			domain.ProductAggregate,
-			c.Get("registry").(registry.Registry),
-			c.Get("aggregateStore").(es.AggregateStore),
+			c.Get(constants.RegistryKey).(registry.Registry),
+			c.Get(constants.AggregateStoreKey).(es.AggregateStore),
 		), nil
 	})
-	container.AddScoped("catalog", func(c di.Container) (any, error) {
-		return postgres.NewCatalogRepository("stores.products", c.Get("tx").(*sql.Tx)), nil
+	container.AddScoped(constants.CatalogRepoKey, func(c di.Container) (any, error) {
+		return postgres.NewCatalogRepository(
+			constants.CatalogTableName,
+			postgresotel.Trace(c.Get(constants.DatabaseTransactionKey).(*sql.Tx)),
+		), nil
 	})
-	container.AddScoped("mall", func(c di.Container) (any, error) {
-		return postgres.NewMallRepository("stores.stores", c.Get("tx").(*sql.Tx)), nil
+	container.AddScoped(constants.MallRepoKey, func(c di.Container) (any, error) {
+		return postgres.NewMallRepository(
+			constants.MallTableName,
+			postgresotel.Trace(c.Get(constants.DatabaseTransactionKey).(*sql.Tx)),
+		), nil
 	})
 
 	// setup application
-	container.AddScoped("app", func(c di.Container) (any, error) {
-		return logging.LogApplicationAccess(
-			application.New(
-				c.Get("stores").(domain.StoreRepository),
-				c.Get("products").(domain.ProductRepository),
-				c.Get("catalog").(domain.CatalogRepository),
-				c.Get("mall").(domain.MallRepository),
-			),
-			c.Get("logger").(zerolog.Logger),
+	container.AddScoped(constants.ApplicationKey, func(c di.Container) (any, error) {
+		return application.New(
+			c.Get(constants.StoresRepoKey).(domain.StoreRepository),
+			c.Get(constants.ProductsRepoKey).(domain.ProductRepository),
+			c.Get(constants.CatalogRepoKey).(domain.CatalogRepository),
+			c.Get(constants.MallRepoKey).(domain.MallRepository),
+			c.Get(constants.DomainDispatcherKey).(ddd.EventPublisher[ddd.Event]),
 		), nil
 	})
-	container.AddScoped("catalogHandlers", func(c di.Container) (any, error) {
-		return logging.LogEventHandlerAccess[ddd.AggregateEvent](
-			handlers.NewCatalogHandlers(c.Get("catalog").(domain.CatalogRepository)),
-			"Catalog", c.Get("logger").(zerolog.Logger),
-		), nil
+	container.AddScoped(constants.CatalogHandlersKey, func(c di.Container) (any, error) {
+		return handlers.NewCatalogHandlers(c.Get(constants.CatalogRepoKey).(domain.CatalogRepository)), nil
 	})
-	container.AddScoped("mallHandlers", func(c di.Container) (any, error) {
-		return logging.LogEventHandlerAccess[ddd.AggregateEvent](
-			handlers.NewMallHandlers(c.Get("mall").(domain.MallRepository)),
-			"Mall", c.Get("logger").(zerolog.Logger),
-		), nil
+	container.AddScoped(constants.MallHandlersKey, func(c di.Container) (any, error) {
+		return handlers.NewMallHandlers(c.Get(constants.MallRepoKey).(domain.MallRepository)), nil
 	})
-	container.AddScoped("domainEventHandlers", func(c di.Container) (any, error) {
-		return logging.LogEventHandlerAccess[ddd.AggregateEvent](
-			handlers.NewDomainEventHandlers(c.Get("eventStream").(am.EventStream)),
-			"DomainEvents", c.Get("logger").(zerolog.Logger),
-		), nil
+	container.AddScoped(constants.DomainEventHandlersKey, func(c di.Container) (any, error) {
+		return handlers.NewDomainEventHandlers(c.Get(constants.EventPublisherKey).(am.EventPublisher)), nil
 	})
+	outboxProcessor := tm.NewOutboxProcessor(
+		stream,
+		pg.NewOutboxStore(constants.OutboxTableName, svc.DB()),
+	)
 
 	// setup Driver adapters
-	if err = grpc.RegisterServerTx(container, mono.RPC()); err != nil {
+	if err = grpc.RegisterServerTx(container, svc.RPC()); err != nil {
 		return err
 	}
-	if err = rest.RegisterGateway(ctx, mono.Mux(), mono.Config().Rpc.Address()); err != nil {
+	if err = rest.RegisterGateway(ctx, svc.Mux(), svc.Config().Rpc.Address()); err != nil {
 		return err
 	}
-	if err = rest.RegisterSwagger(mono.Mux()); err != nil {
+	if err = rest.RegisterSwagger(svc.Mux()); err != nil {
 		return err
 	}
 	handlers.RegisterCatalogHandlersTx(container)
 	handlers.RegisterMallHandlersTx(container)
 	handlers.RegisterDomainEventHandlersTx(container)
-	if err = storespb.RegisterAsyncAPI(mono.Mux()); err != nil {
+	if err = storespb.RegisterAsyncAPI(svc.Mux()); err != nil {
 		return err
 	}
-	startOutboxProcessor(ctx, container)
+	startOutboxProcessor(ctx, outboxProcessor, svc.Logger())
 
 	return nil
 }
@@ -217,10 +224,7 @@ func registrations(reg registry.Registry) (err error) {
 
 	return
 }
-func startOutboxProcessor(ctx context.Context, container di.Container) {
-	outboxProcessor := container.Get("outboxProcessor").(tm.OutboxProcessor)
-	logger := container.Get("logger").(zerolog.Logger)
-
+func startOutboxProcessor(ctx context.Context, outboxProcessor tm.OutboxProcessor, logger zerolog.Logger) {
 	go func() {
 		err := outboxProcessor.Start(ctx)
 		if err != nil {

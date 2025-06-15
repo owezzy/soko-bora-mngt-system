@@ -2,12 +2,12 @@ package sec
 
 import (
 	"context"
-	"github.com/owezzy/soko-bora-mngt-system/internal/am"
+
 	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
 )
 
 type (
-	StepActionFunc[T any]       func(ctx context.Context, data T) am.Command
+	StepActionFunc[T any]       func(ctx context.Context, data T) (string, ddd.Command, error)
 	StepReplyHandlerFunc[T any] func(ctx context.Context, data T, reply ddd.Reply) error
 
 	SagaStep[T any] interface {
@@ -26,9 +26,10 @@ type (
 	}
 
 	stepResult[T any] struct {
-		ctx *SagaContext[T]
-		cmd am.Command
-		err error
+		ctx         *SagaContext[T]
+		destination string
+		cmd         ddd.Command
+		err         error
 	}
 )
 
@@ -60,9 +61,12 @@ func (s sagaStep[T]) isInvocable(compensating bool) bool {
 
 func (s sagaStep[T]) execute(ctx context.Context, sagaCtx *SagaContext[T]) stepResult[T] {
 	if action := s.actions[sagaCtx.Compensating]; action != nil {
+		destination, cmd, err := action(ctx, sagaCtx.Data)
 		return stepResult[T]{
-			ctx: sagaCtx,
-			cmd: action(ctx, sagaCtx.Data),
+			ctx:         sagaCtx,
+			destination: destination,
+			cmd:         cmd,
+			err:         err,
 		}
 	}
 

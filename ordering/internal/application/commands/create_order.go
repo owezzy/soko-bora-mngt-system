@@ -2,10 +2,11 @@ package commands
 
 import (
 	"context"
-	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
-	"github.com/owezzy/soko-bora-mngt-system/ordering/internal/domain"
 
 	"github.com/stackus/errors"
+
+	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
+	"github.com/owezzy/soko-bora-mngt-system/ordering/internal/domain"
 )
 
 type CreateOrder struct {

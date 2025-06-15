@@ -1,9 +1,10 @@
 package domain
 
 import (
+	"github.com/stackus/errors"
+
 	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
 	"github.com/owezzy/soko-bora-mngt-system/internal/es"
-	"github.com/stackus/errors"
 )
 
 const OrderAggregate = "ordering.Order"

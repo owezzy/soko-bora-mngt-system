@@ -3,88 +3,70 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"github.com/owezzy/soko-bora-mngt-system/baskets"
+	"github.com/owezzy/soko-bora-mngt-system/cosec"
+	"github.com/owezzy/soko-bora-mngt-system/customers"
+	"github.com/owezzy/soko-bora-mngt-system/depot"
+	"github.com/owezzy/soko-bora-mngt-system/internal/config"
+	"github.com/owezzy/soko-bora-mngt-system/internal/system"
+	"github.com/owezzy/soko-bora-mngt-system/internal/web"
+	"github.com/owezzy/soko-bora-mngt-system/migrations"
+	"github.com/owezzy/soko-bora-mngt-system/notifications"
+	"github.com/owezzy/soko-bora-mngt-system/ordering"
 	"github.com/owezzy/soko-bora-mngt-system/payments"
 	"github.com/owezzy/soko-bora-mngt-system/search"
 	"github.com/owezzy/soko-bora-mngt-system/stores"
 	"net/http"
 	"os"
 
-	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v4/stdlib"
-	"github.com/nats-io/nats.go"
-	"github.com/rs/zerolog"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-
-	"github.com/owezzy/soko-bora-mngt-system/baskets"
-	"github.com/owezzy/soko-bora-mngt-system/cosec"
-	"github.com/owezzy/soko-bora-mngt-system/customers"
-	"github.com/owezzy/soko-bora-mngt-system/depot"
-	"github.com/owezzy/soko-bora-mngt-system/internal/config"
-	"github.com/owezzy/soko-bora-mngt-system/internal/logger"
-	"github.com/owezzy/soko-bora-mngt-system/internal/monolith"
-	"github.com/owezzy/soko-bora-mngt-system/internal/rpc"
-	"github.com/owezzy/soko-bora-mngt-system/internal/waiter"
-	"github.com/owezzy/soko-bora-mngt-system/internal/web"
-	"github.com/owezzy/soko-bora-mngt-system/notifications"
-	"github.com/owezzy/soko-bora-mngt-system/ordering"
 )
+
+type monolith struct {
+	*system.System
+	modules []system.Module
+}
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Println(err.Error())
+		fmt.Printf("mallbots exitted abnormally: %s\n", err.Error())
 		os.Exit(1)
 	}
 }
 
 func run() (err error) {
 	var cfg config.AppConfig
-	// parse config/env/...
 	cfg, err = config.InitConfig()
 	if err != nil {
 		return err
 	}
-
-	m := app{cfg: cfg}
-
-	// init infrastructure...
-	// init db
-	m.db, err = sql.Open("pgx", cfg.PG.Conn)
+	s, err := system.NewSystem(cfg)
 	if err != nil {
 		return err
+	}
+	m := monolith{
+		System: s,
+		modules: []system.Module{
+			&baskets.Module{},
+			&customers.Module{},
+			&depot.Module{},
+			&notifications.Module{},
+			&ordering.Module{},
+			&payments.Module{},
+			&stores.Module{},
+			&cosec.Module{},
+			&search.Module{},
+		},
 	}
 	defer func(db *sql.DB) {
 		err := db.Close()
 		if err != nil {
 			return
 		}
-	}(m.db)
-	// init nats & jetstream
-	m.nc, err = nats.Connect(cfg.Nats.URL)
+	}(m.DB())
+	err = m.MigrateDB(migrations.FS)
 	if err != nil {
 		return err
-	}
-	defer m.nc.Close()
-	m.js, err = initJetStream(cfg.Nats, m.nc)
-	if err != nil {
-		return err
-	}
-	m.logger = initLogger(cfg)
-	m.rpc = initRpc(cfg.Rpc)
-	m.mux = initMux(cfg.Web)
-	m.waiter = waiter.New(waiter.CatchSignals())
-
-	// init modules
-	m.modules = []monolith.Module{
-		&baskets.Module{},
-		&customers.Module{},
-		&depot.Module{},
-		&notifications.Module{},
-		&ordering.Module{},
-		&payments.Module{},
-		&stores.Module{},
-		&cosec.Module{},
-		&search.Module{},
 	}
 
 	if err = m.startupModules(); err != nil {
@@ -92,15 +74,15 @@ func run() (err error) {
 	}
 
 	// Mount general web resources
-	m.mux.Mount("/", http.FileServer(http.FS(web.WebUI)))
+	m.Mux().Mount("/", http.FileServer(http.FS(web.WebUI)))
 
 	fmt.Println("started mallbots application")
 	defer fmt.Println("stopped mallbots application")
 
-	m.waiter.Add(
-		m.waitForWeb,
-		m.waitForRPC,
-		m.waitForStream,
+	m.Waiter().Add(
+		m.WaitForWeb,
+		m.WaitForRPC,
+		m.WaitForStream,
 	)
 
 	// go func() {
@@ -112,37 +94,16 @@ func run() (err error) {
 	// 	}
 	// }()
 
-	return m.waiter.Wait()
+	return m.Waiter().Wait()
 }
 
-func initLogger(cfg config.AppConfig) zerolog.Logger {
-	return logger.New(logger.LogConfig{
-		Environment: cfg.Environment,
-		LogLevel:    logger.Level(cfg.LogLevel),
-	})
-}
-
-func initRpc(_ rpc.RpcConfig) *grpc.Server {
-	server := grpc.NewServer()
-	reflection.Register(server)
-
-	return server
-}
-
-func initMux(_ web.WebConfig) *chi.Mux {
-	return chi.NewMux()
-}
-
-func initJetStream(cfg config.NatsConfig, nc *nats.Conn) (nats.JetStreamContext, error) {
-	js, err := nc.JetStream()
-	if err != nil {
-		return nil, err
+func (m *monolith) startupModules() error {
+	for _, module := range m.modules {
+		ctx := m.Waiter().Context()
+		if err := module.Startup(ctx, m); err != nil {
+			return err
+		}
 	}
 
-	_, err = js.AddStream(&nats.StreamConfig{
-		Name:     cfg.Stream,
-		Subjects: []string{fmt.Sprintf("%s.>", cfg.Stream)},
-	})
-
-	return js, err
+	return nil
 }

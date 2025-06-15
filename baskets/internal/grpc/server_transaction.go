@@ -3,11 +3,13 @@ package grpc
 import (
 	"context"
 	"database/sql"
-	"github.com/owezzy/soko-bora-mngt-system/baskets/basketspb"
-	"github.com/owezzy/soko-bora-mngt-system/baskets/internal/application"
-	"github.com/owezzy/soko-bora-mngt-system/internal/di"
 
 	"google.golang.org/grpc"
+
+	"github.com/owezzy/soko-bora-mngt-system/baskets/basketspb"
+	"github.com/owezzy/soko-bora-mngt-system/baskets/internal/application"
+	"github.com/owezzy/soko-bora-mngt-system/baskets/internal/constants"
+	"github.com/owezzy/soko-bora-mngt-system/internal/di"
 )
 
 type serverTx struct {
@@ -28,9 +30,9 @@ func (s serverTx) StartBasket(ctx context.Context, request *basketspb.StartBaske
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.StartBasket(ctx, request)
 }
@@ -39,9 +41,9 @@ func (s serverTx) CancelBasket(ctx context.Context, request *basketspb.CancelBas
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.CancelBasket(ctx, request)
 }
@@ -50,9 +52,9 @@ func (s serverTx) CheckoutBasket(ctx context.Context, request *basketspb.Checkou
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.CheckoutBasket(ctx, request)
 }
@@ -61,9 +63,9 @@ func (s serverTx) AddItem(ctx context.Context, request *basketspb.AddItemRequest
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.AddItem(ctx, request)
 }
@@ -72,9 +74,9 @@ func (s serverTx) RemoveItem(ctx context.Context, request *basketspb.RemoveItemR
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.RemoveItem(ctx, request)
 }
@@ -83,9 +85,9 @@ func (s serverTx) GetBasket(ctx context.Context, request *basketspb.GetBasketReq
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.GetBasket(ctx, request)
 }

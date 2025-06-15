@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/owezzy/soko-bora-mngt-system/internal/es"
-	"github.com/owezzy/soko-bora-mngt-system/internal/registry"
 
 	"github.com/stackus/errors"
+
+	"github.com/owezzy/soko-bora-mngt-system/internal/es"
+	"github.com/owezzy/soko-bora-mngt-system/internal/registry"
 )
 
 type SnapshotStore struct {

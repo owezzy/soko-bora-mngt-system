@@ -2,12 +2,13 @@ package rest
 
 import (
 	"context"
-	"github.com/owezzy/soko-bora-mngt-system/ordering/orderingpb"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/owezzy/soko-bora-mngt-system/ordering/orderingpb"
 )
 
 func RegisterGateway(ctx context.Context, mux *chi.Mux, grpcAddr string) error {

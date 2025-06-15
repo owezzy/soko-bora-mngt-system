@@ -2,30 +2,54 @@ package handlers
 
 import (
 	"context"
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/owezzy/soko-bora-mngt-system/customers/customerspb"
 	"github.com/owezzy/soko-bora-mngt-system/customers/internal/application"
 	"github.com/owezzy/soko-bora-mngt-system/internal/am"
 	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
+	"github.com/owezzy/soko-bora-mngt-system/internal/errorsotel"
+	"github.com/owezzy/soko-bora-mngt-system/internal/registry"
 )
 
 type commandHandlers struct {
 	app application.App
 }
 
-func NewCommandHandlers(app application.App) ddd.CommandHandler[ddd.Command] {
-	return commandHandlers{
+func NewCommandHandlers(reg registry.Registry, app application.App, replyPublisher am.ReplyPublisher, mws ...am.MessageHandlerMiddleware) am.MessageHandler {
+	return am.NewCommandHandler(reg, replyPublisher, commandHandlers{
 		app: app,
-	}
+	}, mws...)
 }
 
-func RegisterCommandHandlers(subscriber am.RawMessageSubscriber, handlers am.RawMessageHandler) error {
-	return subscriber.Subscribe(customerspb.CommandChannel, handlers, am.MessageFilter{
+func RegisterCommandHandlers(subscriber am.MessageSubscriber, handlers am.MessageHandler) error {
+	_, err := subscriber.Subscribe(customerspb.CommandChannel, handlers, am.MessageFilter{
 		customerspb.AuthorizeCustomerCommand,
 	}, am.GroupName("customer-commands"))
+	return err
 }
 
-func (h commandHandlers) HandleCommand(ctx context.Context, cmd ddd.Command) (ddd.Reply, error) {
+func (h commandHandlers) HandleCommand(ctx context.Context, cmd ddd.Command) (reply ddd.Reply, err error) {
+	span := trace.SpanFromContext(ctx)
+	defer func(started time.Time) {
+		if err != nil {
+			span.AddEvent(
+				"Encountered an error handling command",
+				trace.WithAttributes(errorsotel.ErrAttrs(err)...),
+			)
+		}
+		span.AddEvent("Handled command", trace.WithAttributes(
+			attribute.Int64("TookMS", time.Since(started).Milliseconds()),
+		))
+	}(time.Now())
+
+	span.AddEvent("Handling command", trace.WithAttributes(
+		attribute.String("Command", cmd.CommandName()),
+	))
+
 	switch cmd.CommandName() {
 	case customerspb.AuthorizeCustomerCommand:
 		return h.doAuthorizeCustomer(ctx, cmd)

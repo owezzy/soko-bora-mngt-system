@@ -2,6 +2,7 @@ package es
 
 import (
 	"fmt"
+
 	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
 )
 
@@ -27,7 +28,7 @@ func LoadEvent(v interface{}, event ddd.AggregateEvent) error {
 	if err := agg.ApplyEvent(event); err != nil {
 		return err
 	}
-	agg.setVersion(event.AggregateVersion())
+	agg.SetVersion(event.AggregateVersion())
 
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/owezzy/soko-bora-mngt-system/internal/di"
 	"github.com/owezzy/soko-bora-mngt-system/payments/internal/application"
+	"github.com/owezzy/soko-bora-mngt-system/payments/internal/constants"
 	"github.com/owezzy/soko-bora-mngt-system/payments/paymentspb"
 )
 
@@ -29,9 +30,9 @@ func (s serverTx) AuthorizePayment(ctx context.Context, request *paymentspb.Auth
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.AuthorizePayment(ctx, request)
 }
@@ -40,9 +41,9 @@ func (s serverTx) ConfirmPayment(ctx context.Context, request *paymentspb.Confir
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.ConfirmPayment(ctx, request)
 }
@@ -51,9 +52,9 @@ func (s serverTx) CreateInvoice(ctx context.Context, request *paymentspb.CreateI
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.CreateInvoice(ctx, request)
 }
@@ -62,9 +63,9 @@ func (s serverTx) AdjustInvoice(ctx context.Context, request *paymentspb.AdjustI
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.AdjustInvoice(ctx, request)
 }
@@ -73,9 +74,9 @@ func (s serverTx) PayInvoice(ctx context.Context, request *paymentspb.PayInvoice
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.PayInvoice(ctx, request)
 }
@@ -84,9 +85,9 @@ func (s serverTx) CancelInvoice(ctx context.Context, request *paymentspb.CancelI
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
 		err = s.closeTx(tx, err)
-	}(di.Get(ctx, "tx").(*sql.Tx))
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
-	next := server{app: di.Get(ctx, "app").(application.App)}
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.App)}
 
 	return next.CancelInvoice(ctx, request)
 }

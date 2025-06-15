@@ -2,9 +2,15 @@ package handlers
 
 import (
 	"context"
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/owezzy/soko-bora-mngt-system/internal/am"
 	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
+	"github.com/owezzy/soko-bora-mngt-system/internal/errorsotel"
+	"github.com/owezzy/soko-bora-mngt-system/internal/registry"
 	"github.com/owezzy/soko-bora-mngt-system/ordering/internal/application"
 	"github.com/owezzy/soko-bora-mngt-system/ordering/internal/application/commands"
 	"github.com/owezzy/soko-bora-mngt-system/ordering/orderingpb"
@@ -14,20 +20,38 @@ type commandHandlers struct {
 	app application.App
 }
 
-func NewCommandHandlers(app application.App) ddd.CommandHandler[ddd.Command] {
-	return commandHandlers{
+func NewCommandHandlers(reg registry.Registry, app application.App, replyPublisher am.ReplyPublisher, mws ...am.MessageHandlerMiddleware) am.MessageHandler {
+	return am.NewCommandHandler(reg, replyPublisher, commandHandlers{
 		app: app,
-	}
+	}, mws...)
 }
 
-func RegisterCommandHandlers(subscriber am.RawMessageSubscriber, handlers am.RawMessageHandler) error {
-	return subscriber.Subscribe(orderingpb.CommandChannel, handlers, am.MessageFilter{
+func RegisterCommandHandlers(subscriber am.MessageSubscriber, handlers am.MessageHandler) error {
+	_, err := subscriber.Subscribe(orderingpb.CommandChannel, handlers, am.MessageFilter{
 		orderingpb.RejectOrderCommand,
 		orderingpb.ApproveOrderCommand,
 	}, am.GroupName("ordering-commands"))
+	return err
 }
 
-func (h commandHandlers) HandleCommand(ctx context.Context, cmd ddd.Command) (ddd.Reply, error) {
+func (h commandHandlers) HandleCommand(ctx context.Context, cmd ddd.Command) (reply ddd.Reply, err error) {
+	span := trace.SpanFromContext(ctx)
+	defer func(started time.Time) {
+		if err != nil {
+			span.AddEvent(
+				"Encountered an error handling command",
+				trace.WithAttributes(errorsotel.ErrAttrs(err)...),
+			)
+		}
+		span.AddEvent("Handled command", trace.WithAttributes(
+			attribute.Int64("TookMS", time.Since(started).Milliseconds()),
+		))
+	}(time.Now())
+
+	span.AddEvent("Handling command", trace.WithAttributes(
+		attribute.String("Command", cmd.CommandName()),
+	))
+
 	switch cmd.CommandName() {
 	case orderingpb.RejectOrderCommand:
 		return h.doRejectOrder(ctx, cmd)

@@ -2,28 +2,46 @@ package grpc
 
 import (
 	"context"
-	"github.com/owezzy/soko-bora-mngt-system/baskets/internal/domain"
-	"github.com/owezzy/soko-bora-mngt-system/stores/storespb"
 
 	"github.com/stackus/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+
+	"github.com/owezzy/soko-bora-mngt-system/baskets/internal/domain"
+	"github.com/owezzy/soko-bora-mngt-system/internal/rpc"
+	"github.com/owezzy/soko-bora-mngt-system/stores/storespb"
 )
 
 type ProductRepository struct {
-	client storespb.StoresServiceClient
+	endpoint string
 }
 
 var _ domain.ProductRepository = (*ProductRepository)(nil)
 
-func NewProductRepository(conn *grpc.ClientConn) ProductRepository {
-	return ProductRepository{client: storespb.NewStoresServiceClient(conn)}
+func NewProductRepository(endpoint string) ProductRepository {
+	return ProductRepository{
+		endpoint: endpoint,
+	}
 }
 
-func (r ProductRepository) Find(ctx context.Context, productID string) (*domain.Product, error) {
-	resp, err := r.client.GetProduct(ctx, &storespb.GetProductRequest{
+func (r ProductRepository) Find(ctx context.Context, productID string) (product *domain.Product, err error) {
+	var conn *grpc.ClientConn
+	conn, err = r.dial(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func(conn *grpc.ClientConn) {
+		_ = conn.Close()
+	}(conn)
+
+	resp, err := storespb.NewStoresServiceClient(conn).GetProduct(ctx, &storespb.GetProductRequest{
 		Id: productID,
 	})
 	if err != nil {
+		if errors.GRPCCode(err) == codes.NotFound {
+			return nil, errors.ErrNotFound.Msg("product was not located")
+		}
 		return nil, errors.Wrap(err, "requesting product")
 	}
 
@@ -37,4 +55,8 @@ func (r ProductRepository) productToDomain(product *storespb.Product) *domain.Pr
 		Name:    product.GetName(),
 		Price:   product.GetPrice(),
 	}
+}
+
+func (r ProductRepository) dial(ctx context.Context) (*grpc.ClientConn, error) {
+	return rpc.Dial(ctx, r.endpoint)
 }
