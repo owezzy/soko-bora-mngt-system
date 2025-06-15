@@ -18,15 +18,16 @@ confirm:
 # ==================================================================================== # 
 # DEVELOPMENT
 # ==================================================================================== #
+
 ## run/api: run the cmd/api application
 .PHONY: run/api
-run/api:
-	go run ./cmd/mallbots/main.go
+soko-bora:
+	docker compose --profile monolith up
 
 
 # Stop everything and remove volumes
-.PHONY: run/api
-clean-up-monolith:
+.PHONY: clean-up-monolith
+clean-up-soko-bora:
 	docker-compose down -v
 
 .PHONY: run/install-tools
