@@ -1,0 +1,32 @@
+version: v2
+modules:
+  - path: baskets
+  - path: customers
+  - path: depot
+  - path: internal/am
+  - path: internal/jetstream
+  - path: notifications
+  - path: ordering
+  - path: payments
+  - path: search
+  - path: stores
+lint:
+  except:
+    - FIELD_NOT_REQUIRED
+    - PACKAGE_DIRECTORY_MATCH
+    - PACKAGE_NO_IMPORT_CYCLE
+    - PACKAGE_VERSION_SUFFIX
+  enum_zero_value_suffix: _UNKNOWN
+  disallow_comment_ignores: true
+breaking:
+  use:
+    - FILE
+  except:
+    - EXTENSION_NO_DELETE
+    - FIELD_SAME_DEFAULT
+deps:
+  - buf.build/google/googleapis
+  - buf.build/grpc/grpc
+  - buf.build/connectrpc/es:v1.4.0
+  - buf.build/bufbuild/es
+  - buf.build/connectrpc/go:v1.16.2
