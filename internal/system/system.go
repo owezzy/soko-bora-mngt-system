@@ -4,13 +4,18 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/owezzy/soko-bora-mngt-system/internal/config"
-	"github.com/owezzy/soko-bora-mngt-system/internal/logger"
-	"github.com/owezzy/soko-bora-mngt-system/internal/waiter"
 	"io/fs"
 	"net"
 	"net/http"
 	"time"
+
+	connectcors "connectrpc.com/cors"
+	"github.com/owezzy/soko-bora-mngt-system/internal/config"
+	"github.com/owezzy/soko-bora-mngt-system/internal/logger"
+	"github.com/owezzy/soko-bora-mngt-system/internal/waiter"
+	"github.com/rs/cors"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -177,10 +182,24 @@ func (s *System) Waiter() waiter.Waiter {
 	return s.waiter
 }
 
+// WaitForWeb TODO:: add withCorsFunc
 func (s *System) WaitForWeb(ctx context.Context) error {
+	// webServer := &http.Server{
+	//	Addr: s.cfg.Web.Address(),
+	//	//Handler: s.mux,
+	//	Handler: withCORS(h2c.NewHandler(s.mux, &http2.Server{})),
+	//}
+
 	webServer := &http.Server{
-		Addr:    s.cfg.Web.Address(),
-		Handler: s.mux,
+		Addr: s.cfg.Web.Address(),
+		Handler: h2c.NewHandler(
+			newCORS().Handler(s.mux),
+			&http2.Server{},
+		),
+		ReadHeaderTimeout: time.Second,
+		ReadTimeout:       5 * time.Minute,
+		WriteTimeout:      5 * time.Minute,
+		MaxHeaderBytes:    8 * 1024, // 8KiB
 	}
 
 	group, gCtx := errgroup.WithContext(ctx)
@@ -267,4 +286,53 @@ func serverErrorUnaryInterceptor() grpc.UnaryServerInterceptor {
 		resp, err = handler(ctx, req)
 		return resp, errors.SendGRPCError(err)
 	}
+}
+
+func withCORS(connectHandler http.Handler) http.Handler {
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: connectcors.AllowedMethods(),
+		AllowedHeaders: connectcors.AllowedHeaders(),
+		ExposedHeaders: connectcors.ExposedHeaders(),
+	})
+	return c.Handler(connectHandler)
+}
+
+func newCORS() *cors.Cors {
+	// To let web developers play with the demo service from browsers, we need a
+	// very permissive CORS setup.
+	return cors.New(cors.Options{
+		AllowedMethods: []string{
+			http.MethodHead,
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+		},
+		AllowOriginFunc: func(_ /* origin */ string) bool {
+			// Allow all origins, which effectively disables CORS.
+			return true
+		},
+		AllowedHeaders: []string{"*"},
+		ExposedHeaders: []string{
+			// Content-Type is in the default safelist.
+			"Accept",
+			"Accept-Encoding",
+			"Accept-Post",
+			"Connect-Accept-Encoding",
+			"Connect-Content-Encoding",
+			"Content-Encoding",
+			"Grpc-Accept-Encoding",
+			"Grpc-Encoding",
+			"Grpc-Message",
+			"Grpc-Status",
+			"Grpc-Status-Details-Bin",
+		},
+		// Let browsers cache CORS information for longer, which reduces the number
+		// of preflight requests. Any changes to ExposedHeaders won't take effect
+		// until the cached data expires. FF caps this value at 24h, and modern
+		// Chrome caps it at 2h.
+		MaxAge: int(2 * time.Hour / time.Second),
+	})
 }

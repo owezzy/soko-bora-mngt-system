@@ -6,7 +6,7 @@ managed:
       module: buf.build/googleapis/googleapis
   override:
     - file_option: go_package_prefix
-      value: github.com/owezzy/soko-bora-mngt-system/search/searchpb
+      value: github.com/owezzy/soko-bora-mngt-system/search
 plugins:
   - local: protoc-gen-go
     out: .
@@ -26,3 +26,20 @@ plugins:
       - openapi_configuration=internal/rest/api.openapi.yaml
       - allow_merge=true
       - merge_file_name=api
+  # connect
+  - remote: buf.build/connectrpc/go:v1.16.2
+    out: .
+    opt:
+      - paths=source_relative
+  # connect web
+  - remote: buf.build/connectrpc/es
+    out: ../client/soko-bora-web-app/src/proto
+    opt:
+      - target=ts
+      - import_extension=.ts
+  # dependencies
+  - remote: buf.build/bufbuild/es
+    out: ../client/soko-bora-web-app/src/proto
+    opt:
+      - target=ts
+      - import_extension=.ts
