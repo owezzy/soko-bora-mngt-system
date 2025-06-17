@@ -4,6 +4,8 @@ go 1.24
 
 require (
 	github.com/cucumber/godog v0.12.5
+	connectrpc.com/connect v1.16.2
+    connectrpc.com/cors v0.1.0
 	github.com/ddosify/go-faker v0.1.1
 	github.com/docker/go-connections v0.5.0
 	github.com/go-chi/chi/v5 v5.0.7
