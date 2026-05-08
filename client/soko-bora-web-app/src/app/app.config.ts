@@ -7,13 +7,21 @@ import {provideRouter, withInMemoryScrolling} from '@angular/router';
 import {provideFuse} from '@fuse';
 import {provideTransloco, TranslocoService} from '@jsverse/transloco';
 import {appRoutes} from 'app/app.routes';
+import type { GetDemoBootstrapResponse } from '../proto/searchpb/api_pb';
 import {provideAuth} from 'app/core/auth/auth.provider';
 import {provideIcons} from 'app/core/icons/icons.provider';
+import {DemoBootstrapStore} from 'app/core/demo-bootstrap/demo-bootstrap.store';
 import {MockApiService} from 'app/mock-api';
 import {firstValueFrom} from 'rxjs';
+import {tap} from 'rxjs/operators';
 import {TranslocoHttpLoader} from './core/transloco/transloco.http-loader';
 import {provideConnect} from "../connect/connect.module";
+import {SearchGrpcService} from '../connect/tokens';
 import {provideProtractorTestingSupport} from "@angular/platform-browser";
+
+const connectBaseUrl = ['4200', '4300'].includes(window.location.port)
+    ? 'http://localhost:8080'
+    : window.location.origin;
 
 export const appConfig: ApplicationConfig = {
     providers: [
@@ -25,7 +33,7 @@ export const appConfig: ApplicationConfig = {
         ),
         // connect to GRPC setup
         provideConnect({
-            baseUrl: "http://localhost:8080",
+            baseUrl: connectBaseUrl,
         }),
         provideProtractorTestingSupport(),
 
@@ -75,6 +83,16 @@ export const appConfig: ApplicationConfig = {
             translocoService.setActiveLang(defaultLang);
 
             return firstValueFrom(translocoService.load(defaultLang));
+        }),
+        provideAppInitializer(() => {
+            const search = inject(SearchGrpcService);
+            const bootstrapStore = inject(DemoBootstrapStore);
+
+            return firstValueFrom(
+                search.getDemoBootstrap({}).pipe(
+                    tap((bootstrap) => bootstrapStore.setBootstrap(bootstrap as GetDemoBootstrapResponse)),
+                ),
+            );
         }),
 
         // Fuse

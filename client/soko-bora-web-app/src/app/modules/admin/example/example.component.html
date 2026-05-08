@@ -1,9 +1,51 @@
 <div class="flex min-w-0 flex-auto flex-col">
     <!-- Main -->
     <div class="flex-auto p-6 sm:p-10">
-        <!-- CONTENT GOES HERE -->
-        <div
-            class="h-400 max-h-400 min-h-400 rounded-2xl border-2 border-dashed border-gray-300"
-        ></div>
+        @if (bootstrap$ | async; as bootstrap) {
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                <div class="rounded-2xl bg-card p-6 shadow">
+                    <div class="text-xl font-semibold">Demo kiosk bootstrap</div>
+                    <div class="mt-2 text-secondary">
+                        Backend-served demo context for the kiosk flow.
+                    </div>
+
+                    <div class="mt-6 rounded-xl border border-gray-200 p-4">
+                        <div class="text-sm font-medium text-secondary">Customer</div>
+                        <div class="mt-2 text-lg font-semibold">{{ bootstrap.customer?.name }}</div>
+                        <div class="text-sm text-secondary">{{ bootstrap.customer?.id }}</div>
+                    </div>
+
+                    <div class="mt-6 grid gap-4 md:grid-cols-2">
+                        @for (store of bootstrap.stores; track store.id) {
+                            <div class="rounded-xl border border-gray-200 p-4">
+                                <div class="font-semibold">{{ store.name }}</div>
+                                <div class="mt-1 text-xs text-secondary">{{ store.id }}</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="rounded-2xl bg-card p-6 shadow">
+                    <div class="text-xl font-semibold">Seeded products</div>
+                    <div class="mt-2 text-secondary">
+                        These IDs come from the deterministic backend seed spec.
+                    </div>
+
+                    <div class="mt-6 space-y-3">
+                        @for (product of bootstrap.products; track product.id) {
+                            <div class="rounded-xl border border-gray-200 p-4">
+                                <div class="font-semibold">{{ product.name }}</div>
+                                <div class="mt-1 text-sm text-secondary">{{ product.storeName }}</div>
+                                <div class="mt-1 text-xs text-secondary">{{ product.id }}</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        } @else {
+            <div class="rounded-2xl border border-dashed border-gray-300 p-10 text-secondary">
+                Loading kiosk bootstrap context...
+            </div>
+        }
     </div>
 </div>

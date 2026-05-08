@@ -22,7 +22,7 @@ export type ObservableClient<T extends DescService> = {
 export function createObservableClient<T extends DescService>(
     service: T,
     transport: Transport
-) {
+): ObservableClient<T> {
     return makeAnyClient(service, (method: DescMethodUnary | DescMethodStreaming) => {
         switch (method.methodKind) {
             case "unary":
