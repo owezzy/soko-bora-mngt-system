@@ -1,0 +1,208 @@
+<div class="flex min-w-0 flex-auto flex-col">
+    <div class="flex-auto p-6 sm:p-10">
+        @if (kiosk.bootstrap(); as bootstrap) {
+            <div class="space-y-6">
+                <div class="rounded-2xl bg-card p-6 shadow">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <div class="text-2xl font-semibold">Monolith kiosk demo</div>
+                            <div class="mt-2 text-secondary">
+                                The kiosk now uses backend bootstrap data plus live Customers, Baskets, Payments, and Ordering services.
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-gray-200 px-4 py-3 text-sm">
+                            <div class="font-medium">Current status</div>
+                            <div class="mt-1 text-secondary">{{ kiosk.statusMessage() }}</div>
+                        </div>
+                    </div>
+
+                    @if (kiosk.error(); as error) {
+                        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            {{ error }}
+                        </div>
+                    }
+                </div>
+
+                <div class="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.9fr)]">
+                    <div class="space-y-6">
+                        <div class="rounded-2xl bg-card p-6 shadow">
+                            <div class="flex flex-wrap gap-4">
+                                <div class="min-w-0 flex-1 rounded-xl border border-gray-200 p-4">
+                                    <div class="text-sm font-medium text-secondary">Bootstrap customer</div>
+                                    <div class="mt-2 text-lg font-semibold">
+                                        {{ kiosk.customer()?.name ?? bootstrap.customer?.name }}
+                                    </div>
+                                    <div class="text-xs text-secondary">{{ bootstrap.customer?.id }}</div>
+                                </div>
+
+                                <div class="min-w-0 flex-1 rounded-xl border border-gray-200 p-4">
+                                    <div class="text-sm font-medium text-secondary">Wired backend services</div>
+                                    <div class="mt-2 flex flex-wrap gap-2 text-xs font-medium">
+                                        <span class="rounded-full bg-gray-100 px-3 py-1">Search bootstrap</span>
+                                        <span class="rounded-full bg-gray-100 px-3 py-1">Customers</span>
+                                        <span class="rounded-full bg-gray-100 px-3 py-1">Baskets</span>
+                                        <span class="rounded-full bg-gray-100 px-3 py-1">Payments</span>
+                                        <span class="rounded-full bg-gray-100 px-3 py-1">Ordering</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @for (section of kiosk.storeSections(); track section.store.id) {
+                            <div class="rounded-2xl bg-card p-6 shadow">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div>
+                                        <div class="text-xl font-semibold">{{ section.store.name }}</div>
+                                        <div class="text-xs text-secondary">{{ section.store.id }}</div>
+                                    </div>
+                                    <div class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                                        Backend bootstrap catalog
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                                    @for (product of section.products; track product.id) {
+                                        <div class="rounded-xl border border-gray-200 p-4">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <div class="font-semibold">{{ product.name }}</div>
+                                                    <div class="mt-1 text-xs text-secondary">{{ product.id }}</div>
+                                                </div>
+                                                <div class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium">
+                                                    Qty in basket: {{ kiosk.basketQuantities()[product.id] ?? 0 }}
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4 flex items-center gap-3">
+                                                <button
+                                                    type="button"
+                                                    class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    [disabled]="kiosk.isBusy()"
+                                                    (click)="addProduct(product)">
+                                                    Add item
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    [disabled]="kiosk.isBusy() || !(kiosk.basketQuantities()[product.id] ?? 0)"
+                                                    (click)="removeProduct(product.id)">
+                                                    Remove one
+                                                </button>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="rounded-2xl bg-card p-6 shadow">
+                            <div class="text-xl font-semibold">Basket</div>
+                            <div class="mt-2 text-secondary">
+                                Basket operations go through the live Basket service.
+                            </div>
+
+                            @if (kiosk.basket(); as basket) {
+                                <div class="mt-4 rounded-xl border border-gray-200 p-4">
+                                    <div class="text-sm font-medium text-secondary">Basket ID</div>
+                                    <div class="mt-1 break-all text-sm">{{ basket.id }}</div>
+                                </div>
+
+                                <div class="mt-4 space-y-3">
+                                    @for (item of kiosk.basketItems(); track item.productId) {
+                                        <div class="rounded-xl border border-gray-200 p-4">
+                                            <div class="font-medium">{{ item.productName }}</div>
+                                            <div class="mt-1 text-sm text-secondary">{{ item.storeName }}</div>
+                                            <div class="mt-2 text-sm text-secondary">
+                                                {{ item.quantity }} x KES {{ item.productPrice | number:'1.2-2' }}
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="mt-4 flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
+                                    <span class="font-medium">Basket total</span>
+                                    <span class="text-lg font-semibold">KES {{ kiosk.basketTotal() | number:'1.2-2' }}</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="mt-4 w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    [disabled]="kiosk.isBusy() || !kiosk.basketItems().length"
+                                    (click)="checkout()">
+                                    Authorize payment and checkout
+                                </button>
+                            } @else {
+                                <div class="mt-4 rounded-xl border border-dashed border-gray-300 p-6 text-sm text-secondary">
+                                    Add a product to create a real backend basket for the seeded demo customer.
+                                </div>
+                            }
+                        </div>
+
+                        <div class="rounded-2xl bg-card p-6 shadow">
+                            <div class="text-xl font-semibold">Checkout and order tracking</div>
+                            <div class="mt-2 text-secondary">
+                                Payments are authorized before basket checkout, then the Ordering service is polled until the order becomes visible.
+                            </div>
+
+                            <div class="mt-4 space-y-4">
+                                <div class="rounded-xl border border-gray-200 p-4">
+                                    <div class="text-sm font-medium text-secondary">Authorized payment</div>
+                                    <div class="mt-1 break-all text-sm">{{ kiosk.paymentId() ?? 'Not authorized yet' }}</div>
+                                </div>
+
+                                <div class="rounded-xl border border-gray-200 p-4">
+                                    <div class="flex items-center justify-between gap-4">
+                                        <div>
+                                            <div class="text-sm font-medium text-secondary">Ordering status</div>
+                                            <div class="mt-1 text-sm">
+                                                @if (kiosk.order(); as order) {
+                                                    <span>Order {{ order.id }} is {{ order.status | titlecase }}.</span>
+                                                } @else {
+                                                    <span>No order has been created yet.</span>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                            [disabled]="kiosk.isBusy() || !kiosk.basket()"
+                                            (click)="refreshOrder()">
+                                            Refresh order
+                                        </button>
+                                    </div>
+                                </div>
+
+                                @if (kiosk.order(); as order) {
+                                    <div class="rounded-xl border border-gray-200 p-4">
+                                        <div class="text-sm font-medium text-secondary">Order items</div>
+
+                                        <div class="mt-3 space-y-3">
+                                            @for (item of order.items; track item.productId) {
+                                                <div class="rounded-lg bg-gray-50 px-4 py-3">
+                                                    <div class="font-medium">{{ item.productName }}</div>
+                                                    <div class="mt-1 text-sm text-secondary">{{ item.storeName }}</div>
+                                                    <div class="mt-1 text-xs text-secondary">
+                                                        {{ item.quantity }} x KES {{ item.price | number:'1.2-2' }}
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        } @else {
+            <div class="rounded-2xl border border-dashed border-gray-300 p-10 text-secondary">
+                Loading kiosk bootstrap context from the backend...
+            </div>
+        }
+    </div>
+</div>
