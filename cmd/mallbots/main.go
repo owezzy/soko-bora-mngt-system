@@ -3,6 +3,9 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
+	"os"
+
 	"github.com/owezzy/soko-bora-mngt-system/baskets"
 	"github.com/owezzy/soko-bora-mngt-system/cosec"
 	"github.com/owezzy/soko-bora-mngt-system/customers"
@@ -16,8 +19,6 @@ import (
 	"github.com/owezzy/soko-bora-mngt-system/payments"
 	"github.com/owezzy/soko-bora-mngt-system/search"
 	"github.com/owezzy/soko-bora-mngt-system/stores"
-	"net/http"
-	"os"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 )

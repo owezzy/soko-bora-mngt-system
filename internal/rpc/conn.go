@@ -19,12 +19,11 @@ func Dial(ctx context.Context, endpoint string) (conn *grpc.ClientConn, err erro
 	return grpc.DialContext(ctx, endpoint,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithChainUnaryInterceptor(
-			otelgrpc.UnaryClientInterceptor(),
 			clientErrorUnaryInterceptor(),
 		),
 		// If there are streaming endpoints also add
-		// grpc.WithStreamInterceptor(
-		// 	otelgrpc.StreamClientInterceptor(),
-		// ),
+		grpc.WithStreamInterceptor(
+			otelgrpc.StreamClientInterceptor(),
+		),
 	)
 }

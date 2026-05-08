@@ -18,7 +18,7 @@ services:
       - nats
       - postgres
       - collector
-    command: [ "./wait-for", "postgres:5432", "--", "/mallbots/monolith" ]
+    command: [ "./wait-for", "postgres:5432", "--", "./monolith" ]
     profiles: [ monolith ]
 
   #

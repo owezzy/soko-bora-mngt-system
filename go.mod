@@ -3,6 +3,8 @@ module github.com/owezzy/soko-bora-mngt-system
 go 1.24
 
 require (
+	connectrpc.com/connect v1.16.2
+	connectrpc.com/cors v0.1.0
 	github.com/cucumber/godog v0.12.5
 	github.com/ddosify/go-faker v0.1.1
 	github.com/docker/go-connections v0.5.0
@@ -23,6 +25,7 @@ require (
 	github.com/pressly/goose/v3 v3.24.3
 	github.com/prometheus/client_golang v0.9.3
 	github.com/rdumont/assistdog v0.0.0-20240711132531-b5b791dd7452
+	github.com/rs/cors v1.11.1
 	github.com/rs/zerolog v1.26.1
 	github.com/stackus/dotenv v0.0.0-20220408232627-ce2f07a165d5
 	github.com/stackus/errors v0.1.5
