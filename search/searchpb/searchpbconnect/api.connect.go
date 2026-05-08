@@ -38,19 +38,24 @@ const (
 	SearchServiceSearchOrdersProcedure = "/searchpb.SearchService/SearchOrders"
 	// SearchServiceGetOrderProcedure is the fully-qualified name of the SearchService's GetOrder RPC.
 	SearchServiceGetOrderProcedure = "/searchpb.SearchService/GetOrder"
+	// SearchServiceGetDemoBootstrapProcedure is the fully-qualified name of the SearchService's
+	// GetDemoBootstrap RPC.
+	SearchServiceGetDemoBootstrapProcedure = "/searchpb.SearchService/GetDemoBootstrap"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	searchServiceServiceDescriptor            = searchpb.File_searchpb_api_proto.Services().ByName("SearchService")
-	searchServiceSearchOrdersMethodDescriptor = searchServiceServiceDescriptor.Methods().ByName("SearchOrders")
-	searchServiceGetOrderMethodDescriptor     = searchServiceServiceDescriptor.Methods().ByName("GetOrder")
+	searchServiceServiceDescriptor                = searchpb.File_searchpb_api_proto.Services().ByName("SearchService")
+	searchServiceSearchOrdersMethodDescriptor     = searchServiceServiceDescriptor.Methods().ByName("SearchOrders")
+	searchServiceGetOrderMethodDescriptor         = searchServiceServiceDescriptor.Methods().ByName("GetOrder")
+	searchServiceGetDemoBootstrapMethodDescriptor = searchServiceServiceDescriptor.Methods().ByName("GetDemoBootstrap")
 )
 
 // SearchServiceClient is a client for the searchpb.SearchService service.
 type SearchServiceClient interface {
 	SearchOrders(context.Context, *connect.Request[searchpb.SearchOrdersRequest]) (*connect.Response[searchpb.SearchOrdersResponse], error)
 	GetOrder(context.Context, *connect.Request[searchpb.GetOrderRequest]) (*connect.Response[searchpb.GetOrderResponse], error)
+	GetDemoBootstrap(context.Context, *connect.Request[searchpb.GetDemoBootstrapRequest]) (*connect.Response[searchpb.GetDemoBootstrapResponse], error)
 }
 
 // NewSearchServiceClient constructs a client for the searchpb.SearchService service. By default, it
@@ -75,13 +80,20 @@ func NewSearchServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(searchServiceGetOrderMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getDemoBootstrap: connect.NewClient[searchpb.GetDemoBootstrapRequest, searchpb.GetDemoBootstrapResponse](
+			httpClient,
+			baseURL+SearchServiceGetDemoBootstrapProcedure,
+			connect.WithSchema(searchServiceGetDemoBootstrapMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // searchServiceClient implements SearchServiceClient.
 type searchServiceClient struct {
-	searchOrders *connect.Client[searchpb.SearchOrdersRequest, searchpb.SearchOrdersResponse]
-	getOrder     *connect.Client[searchpb.GetOrderRequest, searchpb.GetOrderResponse]
+	searchOrders     *connect.Client[searchpb.SearchOrdersRequest, searchpb.SearchOrdersResponse]
+	getOrder         *connect.Client[searchpb.GetOrderRequest, searchpb.GetOrderResponse]
+	getDemoBootstrap *connect.Client[searchpb.GetDemoBootstrapRequest, searchpb.GetDemoBootstrapResponse]
 }
 
 // SearchOrders calls searchpb.SearchService.SearchOrders.
@@ -94,10 +106,16 @@ func (c *searchServiceClient) GetOrder(ctx context.Context, req *connect.Request
 	return c.getOrder.CallUnary(ctx, req)
 }
 
+// GetDemoBootstrap calls searchpb.SearchService.GetDemoBootstrap.
+func (c *searchServiceClient) GetDemoBootstrap(ctx context.Context, req *connect.Request[searchpb.GetDemoBootstrapRequest]) (*connect.Response[searchpb.GetDemoBootstrapResponse], error) {
+	return c.getDemoBootstrap.CallUnary(ctx, req)
+}
+
 // SearchServiceHandler is an implementation of the searchpb.SearchService service.
 type SearchServiceHandler interface {
 	SearchOrders(context.Context, *connect.Request[searchpb.SearchOrdersRequest]) (*connect.Response[searchpb.SearchOrdersResponse], error)
 	GetOrder(context.Context, *connect.Request[searchpb.GetOrderRequest]) (*connect.Response[searchpb.GetOrderResponse], error)
+	GetDemoBootstrap(context.Context, *connect.Request[searchpb.GetDemoBootstrapRequest]) (*connect.Response[searchpb.GetDemoBootstrapResponse], error)
 }
 
 // NewSearchServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -118,12 +136,20 @@ func NewSearchServiceHandler(svc SearchServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(searchServiceGetOrderMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	searchServiceGetDemoBootstrapHandler := connect.NewUnaryHandler(
+		SearchServiceGetDemoBootstrapProcedure,
+		svc.GetDemoBootstrap,
+		connect.WithSchema(searchServiceGetDemoBootstrapMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/searchpb.SearchService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SearchServiceSearchOrdersProcedure:
 			searchServiceSearchOrdersHandler.ServeHTTP(w, r)
 		case SearchServiceGetOrderProcedure:
 			searchServiceGetOrderHandler.ServeHTTP(w, r)
+		case SearchServiceGetDemoBootstrapProcedure:
+			searchServiceGetDemoBootstrapHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -139,4 +165,8 @@ func (UnimplementedSearchServiceHandler) SearchOrders(context.Context, *connect.
 
 func (UnimplementedSearchServiceHandler) GetOrder(context.Context, *connect.Request[searchpb.GetOrderRequest]) (*connect.Response[searchpb.GetOrderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("searchpb.SearchService.GetOrder is not implemented"))
+}
+
+func (UnimplementedSearchServiceHandler) GetDemoBootstrap(context.Context, *connect.Request[searchpb.GetDemoBootstrapRequest]) (*connect.Response[searchpb.GetDemoBootstrapResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("searchpb.SearchService.GetDemoBootstrap is not implemented"))
 }

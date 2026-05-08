@@ -17,6 +17,28 @@
     "application/json"
   ],
   "paths": {
+    "/api/search/bootstrap/demo": {
+      "get": {
+        "operationId": "SearchService_GetDemoBootstrap",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/searchpbGetDemoBootstrapResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SearchService"
+        ]
+      }
+    },
     "/api/search/orders": {
       "post": {
         "summary": "Search for orders",
@@ -169,7 +191,69 @@
         "details": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "searchpbDemoCustomer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "searchpbDemoProduct": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "storeId": {
+          "type": "string"
+        },
+        "storeName": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "searchpbDemoStore": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "searchpbGetDemoBootstrapResponse": {
+      "type": "object",
+      "properties": {
+        "customer": {
+          "$ref": "#/definitions/searchpbDemoCustomer"
+        },
+        "stores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/searchpbDemoStore"
+          }
+        },
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/searchpbDemoProduct"
           }
         }
       }
@@ -197,6 +281,7 @@
         "items": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/OrderItem"
           }
         },
@@ -230,6 +315,7 @@
         "orders": {
           "type": "array",
           "items": {
+            "type": "object",
             "$ref": "#/definitions/searchpbOrder"
           }
         },
