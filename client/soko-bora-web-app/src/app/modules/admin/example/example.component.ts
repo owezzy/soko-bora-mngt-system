@@ -1,28 +1,14 @@
-import {Component, inject, ViewEncapsulation} from '@angular/core';
-import {CustomerGrpcService} from "../../../../connect/tokens";
+import { AsyncPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, ViewEncapsulation } from '@angular/core';
+import { DemoBootstrapStore } from 'app/core/demo-bootstrap/demo-bootstrap.store';
 
 @Component({
     selector     : 'example',
-    standalone   : true,
+    imports      : [AsyncPipe],
     templateUrl  : './example.component.html',
+    changeDetection: ChangeDetectionStrategy.OnPush,
     encapsulation: ViewEncapsulation.None,
 })
-export class ExampleComponent
-{
-    customers = inject(CustomerGrpcService)
-
-    /**
-     * Constructor
-     */
-    constructor(
-    )
-    {
-        this.customers.getCustomer({id: "5c9dc1c8-1456-4bd7-af0c-7a3692ea5263"}).subscribe(
-            (data)=>{
-                console.error('----------------',data)
-            }
-        )
-    }
-
-
+export class ExampleComponent {
+    protected readonly bootstrap$ = inject(DemoBootstrapStore).bootstrap$;
 }

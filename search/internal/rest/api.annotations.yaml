@@ -7,3 +7,5 @@ http:
       body: "*"
     - selector: searchpb.SearchService.GetOrder
       get: /api/search/orders/{id}
+    - selector: searchpb.SearchService.GetDemoBootstrap
+      get: /api/search/bootstrap/demo

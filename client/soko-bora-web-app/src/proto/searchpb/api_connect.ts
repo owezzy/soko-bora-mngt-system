@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetOrderRequest, GetOrderResponse, SearchOrdersRequest, SearchOrdersResponse } from "./api_pb.ts";
+import { GetDemoBootstrapRequest, GetDemoBootstrapResponse, GetOrderRequest, GetOrderResponse, SearchOrdersRequest, SearchOrdersResponse } from "./api_pb.ts";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -28,6 +28,15 @@ export const SearchService = {
       name: "GetOrder",
       I: GetOrderRequest,
       O: GetOrderResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc searchpb.SearchService.GetDemoBootstrap
+     */
+    getDemoBootstrap: {
+      name: "GetDemoBootstrap",
+      I: GetDemoBootstrapRequest,
+      O: GetDemoBootstrapResponse,
       kind: MethodKind.Unary,
     },
   }

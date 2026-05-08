@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "soko_bora_mngt_system",
+  "project_id": "5246e87d-b38e-4cb2-a678-81fac4a61c98"
+}

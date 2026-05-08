@@ -3,9 +3,11 @@ package postgres
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/stackus/errors"
@@ -70,8 +72,85 @@ func (r OrderRepository) UpdateStatus(ctx context.Context, orderID, status strin
 }
 
 func (r OrderRepository) Search(ctx context.Context, search application.SearchOrders) ([]*models.Order, error) {
-	// TODO implement me
-	panic("implement me")
+	const selectQuery = `SELECT order_id, customer_id, customer_name, items, status, created_at FROM %s`
+
+	args := make([]any, 0, 10)
+	clauses := make([]string, 0, 8)
+
+	if search.Filters.CustomerID != "" {
+		args = append(args, search.Filters.CustomerID)
+		clauses = append(clauses, fmt.Sprintf("customer_id = $%d", len(args)))
+	}
+	if !search.Filters.After.IsZero() {
+		args = append(args, search.Filters.After)
+		clauses = append(clauses, fmt.Sprintf("created_at >= $%d", len(args)))
+	}
+	if !search.Filters.Before.IsZero() {
+		args = append(args, search.Filters.Before)
+		clauses = append(clauses, fmt.Sprintf("created_at <= $%d", len(args)))
+	}
+	if len(search.Filters.StoreIDs) > 0 {
+		args = append(args, IDArray(search.Filters.StoreIDs))
+		clauses = append(clauses, fmt.Sprintf("store_ids && $%d", len(args)))
+	}
+	if len(search.Filters.ProductIDs) > 0 {
+		args = append(args, IDArray(search.Filters.ProductIDs))
+		clauses = append(clauses, fmt.Sprintf("product_ids && $%d", len(args)))
+	}
+	if search.Filters.Status != "" {
+		args = append(args, search.Filters.Status)
+		clauses = append(clauses, fmt.Sprintf("status = $%d", len(args)))
+	}
+	if search.Filters.MinTotal > 0 {
+		args = append(args, search.Filters.MinTotal)
+		clauses = append(clauses, fmt.Sprintf("%s >= $%d", orderTotalExpr(), len(args)))
+	}
+	if search.Filters.MaxTotal > 0 {
+		args = append(args, search.Filters.MaxTotal)
+		clauses = append(clauses, fmt.Sprintf("%s <= $%d", orderTotalExpr(), len(args)))
+	}
+
+	query := r.table(selectQuery)
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+	query += " ORDER BY created_at DESC, order_id DESC"
+
+	offset, err := parseOffset(search.Next)
+	if err != nil {
+		return nil, err
+	}
+
+	args = append(args, search.Limit)
+	query += fmt.Sprintf(" LIMIT $%d", len(args))
+	args = append(args, offset)
+	query += fmt.Sprintf(" OFFSET $%d", len(args))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func(rows *sql.Rows) {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			err = errors.Wrap(closeErr, "closing order rows")
+		}
+	}(rows)
+
+	orders := make([]*models.Order, 0, search.Limit)
+	for rows.Next() {
+		order, scanErr := scanOrder(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		orders = append(orders, order)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }
 
 func (r OrderRepository) Get(ctx context.Context, orderID string) (*models.Order, error) {
@@ -82,8 +161,11 @@ func (r OrderRepository) Get(ctx context.Context, orderID string) (*models.Order
 	}
 
 	var itemData []byte
-	err := r.db.QueryRowContext(ctx, r.table(query)).Scan(&order.CustomerID, &order.CustomerName, &itemData, &order.Status, &order.CreatedAt)
+	err := r.db.QueryRowContext(ctx, r.table(query), orderID).Scan(&order.CustomerID, &order.CustomerName, &itemData, &order.Status, &order.CreatedAt)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.ErrNotFound.Msgf("order with id: `%s` does not exist", orderID)
+		}
 		return nil, err
 	}
 
@@ -93,6 +175,7 @@ func (r OrderRepository) Get(ctx context.Context, orderID string) (*models.Order
 		return nil, err
 	}
 	order.Items = items
+	order.Total = calculateTotal(items)
 
 	return order, nil
 }
@@ -135,4 +218,45 @@ func (a IDArray) Value() (driver.Value, error) {
 	}
 	// unsafe way to do this; assumption is all ids are UUIDs
 	return fmt.Sprintf("{%s}", strings.Join(a, ",")), nil
+}
+
+func parseOffset(next string) (int, error) {
+	if next == "" {
+		return 0, nil
+	}
+
+	offset, err := strconv.Atoi(next)
+	if err != nil || offset < 0 {
+		return 0, errors.ErrInvalidArgument.Msg("search next cursor must be a non-negative offset")
+	}
+
+	return offset, nil
+}
+
+func orderTotalExpr() string {
+	return `COALESCE((SELECT SUM((item->>'Price')::double precision * (item->>'Quantity')::integer) FROM jsonb_array_elements(convert_from(items, 'UTF8')::jsonb) item), 0)`
+}
+
+func scanOrder(scanner interface{ Scan(dest ...any) error }) (*models.Order, error) {
+	order := &models.Order{}
+	var itemData []byte
+	if err := scanner.Scan(&order.OrderID, &order.CustomerID, &order.CustomerName, &itemData, &order.Status, &order.CreatedAt); err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(itemData, &order.Items); err != nil {
+		return nil, err
+	}
+	order.Total = calculateTotal(order.Items)
+
+	return order, nil
+}
+
+func calculateTotal(items []models.Item) float64 {
+	var total float64
+	for _, item := range items {
+		total += item.Price * float64(item.Quantity)
+	}
+
+	return total
 }

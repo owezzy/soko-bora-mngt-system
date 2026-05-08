@@ -7,6 +7,32 @@ import "google/protobuf/timestamp.proto";
 service SearchService {
   rpc SearchOrders(SearchOrdersRequest) returns (SearchOrdersResponse) {}
   rpc GetOrder(GetOrderRequest) returns (GetOrderResponse) {}
+  rpc GetDemoBootstrap(GetDemoBootstrapRequest) returns (GetDemoBootstrapResponse) {}
+}
+
+message GetDemoBootstrapRequest {}
+
+message DemoCustomer {
+  string id = 1;
+  string name = 2;
+}
+
+message DemoStore {
+  string id = 1;
+  string name = 2;
+}
+
+message DemoProduct {
+  string id = 1;
+  string store_id = 2;
+  string store_name = 3;
+  string name = 4;
+}
+
+message GetDemoBootstrapResponse {
+  DemoCustomer customer = 1;
+  repeated DemoStore stores = 2;
+  repeated DemoProduct products = 3;
 }
 
 message Order {

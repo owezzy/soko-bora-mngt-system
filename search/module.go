@@ -111,6 +111,9 @@ func Root(ctx context.Context, svc system.Service) (err error) {
 	if err = grpc.RegisterServerTx(container, svc.RPC()); err != nil {
 		return err
 	}
+	if err = rest.RegisterConnect(container, svc.Mux()); err != nil {
+		return err
+	}
 	if err = rest.RegisterGateway(ctx, svc.Mux(), svc.Config().Rpc.Address()); err != nil {
 		return err
 	}

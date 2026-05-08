@@ -29,7 +29,7 @@ func RegisterServerTx(container di.Container, registrar grpc.ServiceRegistrar) e
 func (s serverTx) SearchOrders(ctx context.Context, request *searchpb.SearchOrdersRequest) (resp *searchpb.SearchOrdersResponse, err error) {
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
-		err = s.closeTx(tx, err)
+		err = closeTx(tx, err)
 	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
 	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.Application)}
@@ -40,7 +40,7 @@ func (s serverTx) SearchOrders(ctx context.Context, request *searchpb.SearchOrde
 func (s serverTx) GetOrder(ctx context.Context, request *searchpb.GetOrderRequest) (resp *searchpb.GetOrderResponse, err error) {
 	ctx = s.c.Scoped(ctx)
 	defer func(tx *sql.Tx) {
-		err = s.closeTx(tx, err)
+		err = closeTx(tx, err)
 	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
 
 	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.Application)}
@@ -48,14 +48,13 @@ func (s serverTx) GetOrder(ctx context.Context, request *searchpb.GetOrderReques
 	return next.GetOrder(ctx, request)
 }
 
-func (s serverTx) closeTx(tx *sql.Tx, err error) error {
-	if p := recover(); p != nil {
-		_ = tx.Rollback()
-		panic(p)
-	} else if err != nil {
-		_ = tx.Rollback()
-		return err
-	} else {
-		return tx.Commit()
-	}
+func (s serverTx) GetDemoBootstrap(ctx context.Context, request *searchpb.GetDemoBootstrapRequest) (resp *searchpb.GetDemoBootstrapResponse, err error) {
+	ctx = s.c.Scoped(ctx)
+	defer func(tx *sql.Tx) {
+		err = closeTx(tx, err)
+	}(di.Get(ctx, constants.DatabaseTransactionKey).(*sql.Tx))
+
+	next := server{app: di.Get(ctx, constants.ApplicationKey).(application.Application)}
+
+	return next.GetDemoBootstrap(ctx, request)
 }

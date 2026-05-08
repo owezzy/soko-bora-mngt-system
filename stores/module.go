@@ -160,6 +160,9 @@ func Root(ctx context.Context, svc system.Service) (err error) {
 		return err
 	}
 	startOutboxProcessor(ctx, outboxProcessor, svc.Logger())
+	if err = seedDemoData(ctx, container); err != nil {
+		return err
+	}
 
 	return nil
 }

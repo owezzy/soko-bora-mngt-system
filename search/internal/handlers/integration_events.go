@@ -49,7 +49,7 @@ func RegisterIntegrationEventHandlers(subscriber am.MessageSubscriber, handlers 
 		orderingpb.OrderReadiedEvent,
 		orderingpb.OrderCanceledEvent,
 		orderingpb.OrderCompletedEvent,
-	}, am.GroupName("notification-orders")); err != nil {
+	}, am.GroupName("search-orders")); err != nil {
 		return
 	}
 
@@ -187,6 +187,7 @@ func (h integrationHandlers[T]) onOrderCreated(ctx context.Context, event T) err
 		Items:        items,
 		Total:        total,
 		Status:       "New",
+		CreatedAt:    time.Now().UTC(),
 	}
 	return h.orders.Add(ctx, order)
 }
