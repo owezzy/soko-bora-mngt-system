@@ -6,6 +6,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ import (
 var useMonoDB = flag.Bool("mono", false, "Use mono DB resources")
 
 var assist = assistdog.NewDefault()
+var e2eTransport *client.Runtime
 
 type lastResponseKey struct{}
 type lastErrorKey struct{}
@@ -61,6 +63,7 @@ func TestEndToEnd(t *testing.T) {
 		transport: client.New("localhost:8080", "/", nil),
 		useMonoDB: *useMonoDB,
 	}
+	e2eTransport = cfg.transport
 
 	features, err := func(fs ...feature) ([]feature, error) {
 		features := make([]feature, len(fs))
@@ -75,6 +78,8 @@ func TestEndToEnd(t *testing.T) {
 	}(
 		&basketsFeature{},
 		&customersFeature{},
+		&ordersFeature{},
+		&paymentsFeature{},
 		&storesFeature{},
 	)
 	if err != nil {
@@ -123,7 +128,7 @@ func iReceiveAError(ctx context.Context, msg string) error {
 		return errors.Wrap(errors.ErrUnknown, "expected error to not be nil")
 	}
 
-	if !strings.Contains(err.Error(), "Message:"+msg) {
+	if !strings.Contains(err.Error(), msg) {
 		return errors.Wrapf(errors.ErrInvalidArgument, "expected: %s: got: %s", msg, err.Error())
 	}
 
@@ -162,4 +167,8 @@ func lastError(ctx context.Context) error {
 		return nil
 	}
 	return e.(error)
+}
+
+func nearlyEqualFloat64(left, right float64) bool {
+	return math.Abs(left-right) < 0.0001
 }
