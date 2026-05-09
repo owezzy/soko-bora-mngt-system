@@ -7,7 +7,7 @@
                         <div>
                             <div class="text-2xl font-semibold">Monolith kiosk demo</div>
                             <div class="mt-2 text-secondary">
-                                The kiosk now uses backend bootstrap data plus live Customers, Baskets, Payments, and Ordering services.
+                                The kiosk now uses backend bootstrap plus live Customers, Stores, Baskets, Payments, and Ordering services.
                             </div>
                         </div>
 
@@ -41,6 +41,7 @@
                                     <div class="mt-2 flex flex-wrap gap-2 text-xs font-medium">
                                         <span class="rounded-full bg-gray-100 px-3 py-1">Search bootstrap</span>
                                         <span class="rounded-full bg-gray-100 px-3 py-1">Customers</span>
+                                        <span class="rounded-full bg-gray-100 px-3 py-1">Stores</span>
                                         <span class="rounded-full bg-gray-100 px-3 py-1">Baskets</span>
                                         <span class="rounded-full bg-gray-100 px-3 py-1">Payments</span>
                                         <span class="rounded-full bg-gray-100 px-3 py-1">Ordering</span>
@@ -55,9 +56,10 @@
                                     <div>
                                         <div class="text-xl font-semibold">{{ section.store.name }}</div>
                                         <div class="text-xs text-secondary">{{ section.store.id }}</div>
+                                        <div class="mt-1 text-sm text-secondary">{{ section.store.location }}</div>
                                     </div>
                                     <div class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                                        Backend bootstrap catalog
+                                        Live StoresService catalog
                                     </div>
                                 </div>
 
@@ -67,11 +69,16 @@
                                             <div class="flex items-start justify-between gap-3">
                                                 <div>
                                                     <div class="font-semibold">{{ product.name }}</div>
+                                                    <div class="mt-1 text-sm text-secondary">{{ product.description }}</div>
                                                     <div class="mt-1 text-xs text-secondary">{{ product.id }}</div>
                                                 </div>
                                                 <div class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium">
                                                     Qty in basket: {{ kiosk.basketQuantities()[product.id] ?? 0 }}
                                                 </div>
+                                            </div>
+
+                                            <div class="mt-2 text-sm text-secondary">
+                                                SKU {{ product.sku }} · KES {{ product.price | number:'1.2-2' }}
                                             </div>
 
                                             <div class="mt-4 flex items-center gap-3">

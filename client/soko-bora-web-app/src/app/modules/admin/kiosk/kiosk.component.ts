@@ -1,6 +1,6 @@
 import { DecimalPipe, TitleCasePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit, ViewEncapsulation } from '@angular/core';
-import type { DemoProduct } from 'proto/searchpb/api_pb';
+import type { Product as StoreProduct } from 'proto/storespb/api_pb';
 import { KioskService } from 'app/core/kiosk/kiosk.service';
 
 @Component({
@@ -14,10 +14,10 @@ export class KioskComponent implements OnInit {
     readonly kiosk = inject(KioskService);
 
     ngOnInit(): void {
-        void this.kiosk.loadCustomer();
+        void this.kiosk.initialize();
     }
 
-    addProduct(product: DemoProduct): void {
+    addProduct(product: StoreProduct): void {
         void this.kiosk.addProduct(product);
     }
 
