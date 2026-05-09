@@ -22,8 +22,22 @@ type ProductSpec struct {
 	Price       float64
 }
 
+type PrincipalSpec struct {
+	ID         string
+	Name       string
+	Email      string
+	Password   string
+	Avatar     string
+	Status     string
+	Roles      []string
+	CustomerID string
+	Kind       string
+}
+
 type BootstrapSpec struct {
 	Customer CustomerSpec
+	Auth     PrincipalSpec
+	BotAuth  PrincipalSpec
 	Stores   []StoreSpec
 }
 
@@ -33,6 +47,27 @@ func Spec() BootstrapSpec {
 			ID:        "11111111-1111-1111-1111-111111111111",
 			Name:      "Demo Shopper",
 			SMSNumber: "+254700000001",
+		},
+		Auth: PrincipalSpec{
+			ID:         "cfaad35d-07a3-4447-a6c3-d8c3d54fd5df",
+			Name:       "Brian Hughes",
+			Email:      "hughes.brian@company.com",
+			Password:   "admin",
+			Avatar:     "images/avatars/brian-hughes.jpg",
+			Status:     "online",
+			Roles:      []string{"admin", "customer"},
+			CustomerID: "11111111-1111-1111-1111-111111111111",
+			Kind:       "user",
+		},
+		BotAuth: PrincipalSpec{
+			ID:       "ae1f81af-e4a0-4fa7-90d4-b0f1dad3c001",
+			Name:     "MallBots Service Bot",
+			Email:    "bot@mallbots.internal",
+			Password: "",
+			Avatar:   "",
+			Status:   "online",
+			Roles:    []string{"bot"},
+			Kind:     "bot",
 		},
 		Stores: []StoreSpec{
 			{
