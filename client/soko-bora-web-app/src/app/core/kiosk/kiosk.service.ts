@@ -8,19 +8,17 @@ import {
     CustomerGrpcService,
     OrderingGrpcService,
     PaymentsGrpcService,
+    StoresGrpcService,
 } from 'connect/tokens';
 import type { Basket, Item as BasketItem } from 'proto/basketspb/api_pb';
 import type { Customer } from 'proto/customerspb/api_pb';
 import type { Order as OrderingOrder } from 'proto/orderingpb/api_pb';
-import type {
-    DemoProduct,
-    DemoStore,
-    GetDemoBootstrapResponse,
-} from 'proto/searchpb/api_pb';
+import type { GetDemoBootstrapResponse } from 'proto/searchpb/api_pb';
+import type { Product as StoreProduct, Store as MallStore } from 'proto/storespb/api_pb';
 
 interface KioskStoreSection {
-    store: DemoStore;
-    products: DemoProduct[];
+    store: MallStore;
+    products: StoreProduct[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -30,6 +28,7 @@ export class KioskService {
     private readonly baskets = inject(BasketGrpcService);
     private readonly payments = inject(PaymentsGrpcService);
     private readonly ordering = inject(OrderingGrpcService);
+    private readonly stores = inject(StoresGrpcService);
 
     private readonly bootstrapSignal = toSignal(this.bootstrapStore.bootstrap$, {
         initialValue: this.bootstrapStore.snapshot,
@@ -42,6 +41,7 @@ export class KioskService {
     private readonly busyState = signal(false);
     private readonly errorState = signal<string | null>(null);
     private readonly statusState = signal('Bootstrap loaded from the backend demo configuration.');
+    private readonly storeSectionsState = signal<KioskStoreSection[]>([]);
 
     readonly bootstrap = computed<GetDemoBootstrapResponse | null>(() => this.bootstrapSignal());
     readonly customer = computed(() => this.customerState());
@@ -62,32 +62,46 @@ export class KioskService {
     readonly isBusy = computed(() => this.busyState());
     readonly error = computed(() => this.errorState());
     readonly statusMessage = computed(() => this.statusState());
-    readonly storeSections = computed<KioskStoreSection[]>(() => {
-        const bootstrap = this.bootstrap();
-        if (!bootstrap) {
-            return [];
-        }
+    readonly storeSections = computed<KioskStoreSection[]>(() => this.storeSectionsState());
 
-        return bootstrap.stores.map((store) => ({
-            store,
-            products: bootstrap.products.filter((product) => product.storeId === store.id),
-        }));
-    });
-
-    async loadCustomer(): Promise<void> {
-        const customerId = this.bootstrap()?.customer?.id;
-        if (!customerId || this.customerState()?.id === customerId) {
-            return;
-        }
-
+    async initialize(): Promise<void> {
         await this.run(async () => {
-            const response = await firstValueFrom(this.customers.getCustomer({ id: customerId }));
-            this.customerState.set(response.customer ?? null);
-            this.statusState.set('Demo customer loaded from the Customers service.');
+            const bootstrap = this.requireBootstrap();
+            const customerId = this.requireCustomerId(bootstrap);
+
+            const [customerResponse, storesResponse] = await Promise.all([
+                firstValueFrom(this.customers.getCustomer({ id: customerId })),
+                firstValueFrom(this.stores.getParticipatingStores({})),
+            ]);
+
+            this.customerState.set(customerResponse.customer ?? null);
+
+            const stores = storesResponse.stores;
+            const catalogs = await Promise.all(
+                stores.map(async (store) => {
+                    const catalogResponse = await firstValueFrom(this.stores.getCatalog({ storeId: store.id }));
+
+                    return {
+                        store,
+                        products: catalogResponse.products,
+                    } satisfies KioskStoreSection;
+                }),
+            );
+
+            this.storeSectionsState.set(catalogs);
+            this.statusState.set('Demo customer and live store catalog loaded from backend services.');
         });
     }
 
-    async addProduct(product: DemoProduct): Promise<void> {
+    async loadCustomer(): Promise<void> {
+        if (this.customerState()) {
+            return;
+        }
+
+        await this.initialize();
+    }
+
+    async addProduct(product: StoreProduct): Promise<void> {
         const bootstrap = this.requireBootstrap();
         const customerId = this.requireCustomerId(bootstrap);
 

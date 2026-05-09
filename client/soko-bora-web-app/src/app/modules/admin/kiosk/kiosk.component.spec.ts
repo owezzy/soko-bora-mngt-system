@@ -2,11 +2,8 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { Customer } from 'proto/customerspb/api_pb';
 import type { Order } from 'proto/orderingpb/api_pb';
-import type {
-    DemoProduct,
-    DemoStore,
-    GetDemoBootstrapResponse,
-} from 'proto/searchpb/api_pb';
+import type { GetDemoBootstrapResponse } from 'proto/searchpb/api_pb';
+import type { Product as StoreProduct, Store as MallStore } from 'proto/storespb/api_pb';
 import { KioskService } from 'app/core/kiosk/kiosk.service';
 import { KioskComponent } from 'app/modules/admin/kiosk/kiosk.component';
 
@@ -26,7 +23,7 @@ describe('KioskComponent', () => {
                 $typeName: 'searchpb.DemoStore',
                 id: 'store-1',
                 name: 'Fresh Harvest Grocers',
-            } satisfies DemoStore,
+            },
         ],
         products: [
             {
@@ -35,8 +32,26 @@ describe('KioskComponent', () => {
                 storeId: 'store-1',
                 storeName: 'Fresh Harvest Grocers',
                 name: 'Bananas',
-            } satisfies DemoProduct,
+            },
         ],
+    };
+
+    const store: MallStore = {
+        $typeName: 'storespb.Store',
+        id: 'store-1',
+        name: 'Fresh Harvest Grocers',
+        location: 'Ground Floor',
+        participating: true,
+    };
+
+    const product: StoreProduct = {
+        $typeName: 'storespb.Product',
+        id: 'product-1',
+        storeId: 'store-1',
+        name: 'Bananas',
+        description: 'Fresh bananas from the live catalog',
+        sku: 'BNN-001',
+        price: 6,
     };
 
     const mockKioskService = {
@@ -59,10 +74,11 @@ describe('KioskComponent', () => {
         statusMessage: signal('Bootstrap loaded from the backend demo configuration.'),
         storeSections: signal([
             {
-                store: bootstrap.stores[0],
-                products: bootstrap.products,
+                store,
+                products: [product],
             },
         ]),
+        initialize: () => Promise.resolve(),
         loadCustomer: () => Promise.resolve(),
         addProduct: () => Promise.resolve(),
         removeProduct: () => Promise.resolve(),
@@ -93,7 +109,10 @@ describe('KioskComponent', () => {
         expect(text).toContain('Monolith kiosk demo');
         expect(text).toContain('Demo Shopper');
         expect(text).toContain('Fresh Harvest Grocers');
+        expect(text).toContain('Ground Floor');
         expect(text).toContain('Bananas');
+        expect(text).toContain('Fresh bananas from the live catalog');
+        expect(text).toContain('SKU BNN-001');
         expect(text).toContain('Add a product to create a real backend basket');
     });
 
