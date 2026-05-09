@@ -1,0 +1,79 @@
+with-expecter: true
+disable-version-string: true
+issue-845-fix: true
+resolve-type-alias: false
+
+inpackage: true
+dir: '{{.InterfaceDir}}'
+outpkg: '{{.PackageName}}'
+mockname: 'Mock{{.InterfaceName}}'
+filename: 'mock_{{.InterfaceName | snakecase}}.go'
+
+packages:
+  github.com/owezzy/soko-bora-mngt-system/internal/am:
+    config:
+      include-regex: '.*(Subscriber|Publisher|Handler)$'
+
+  github.com/owezzy/soko-bora-mngt-system/internal/ddd:
+    config:
+      include-regex: '.*(Aggregate|Entity|Subscriber|Publisher|Handler)$'
+
+  github.com/owezzy/soko-bora-mngt-system/internal/es:
+    config:
+      include-regex: '.*(Aggregate|Repository|Store|Handler)$'
+
+  github.com/owezzy/soko-bora-mngt-system/baskets/internal/application:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/baskets/internal/domain:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/customers/customerspb:
+    config:
+      include-regex: '^(CustomersServiceClient|CustomersServiceServer|UnsafeCustomersServiceServer)$'
+
+  github.com/owezzy/soko-bora-mngt-system/customers/internal/application:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/customers/internal/domain:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/depot/internal/domain:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/ordering/orderingpb:
+    config:
+      include-regex: '^(OrderingServiceClient|OrderingServiceServer|UnsafeOrderingServiceServer)$'
+
+  github.com/owezzy/soko-bora-mngt-system/ordering/internal/application:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/ordering/internal/domain:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/payments/internal/application:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/payments/paymentspb:
+    config:
+      include-regex: '^(PaymentsServiceClient|PaymentsServiceServer|UnsafePaymentsServiceServer)$'
+
+  github.com/owezzy/soko-bora-mngt-system/stores/internal/application:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/stores/internal/domain:
+    config:
+      all: true
+
+  github.com/owezzy/soko-bora-mngt-system/stores/storespb:
+    config:
+      include-regex: '^(StoresServiceClient|StoresServiceServer|UnsafeStoresServiceServer)$'
