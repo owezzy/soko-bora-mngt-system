@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 
+	"github.com/stackus/errors"
 	"google.golang.org/grpc"
 
 	"github.com/owezzy/soko-bora-mngt-system/internal/rpc"
@@ -38,14 +39,18 @@ func (r ProductRepository) Find(ctx context.Context, productID string) (product 
 	if err != nil {
 		return nil, err
 	}
+	if resp.GetProduct() == nil {
+		return nil, errors.ErrNotFound.Msgf("product with id: `%s` does not exist", productID)
+	}
 
-	return r.productToDomain(resp.Product), nil
+	return r.productToDomain(resp.GetProduct()), nil
 }
 
 func (r ProductRepository) productToDomain(product *storespb.Product) *models.Product {
 	return &models.Product{
-		ID:   product.GetId(),
-		Name: product.GetName(),
+		ID:      product.GetId(),
+		StoreID: product.GetStoreId(),
+		Name:    product.GetName(),
 	}
 }
 
