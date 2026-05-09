@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 
+	"github.com/stackus/errors"
 	"google.golang.org/grpc"
 
 	"github.com/owezzy/soko-bora-mngt-system/customers/customerspb"
@@ -37,6 +38,9 @@ func (r CustomerRepository) Find(ctx context.Context, customerID string) (custom
 	resp, err := customerspb.NewCustomersServiceClient(conn).GetCustomer(ctx, &customerspb.GetCustomerRequest{Id: customerID})
 	if err != nil {
 		return nil, err
+	}
+	if resp.GetCustomer() == nil {
+		return nil, errors.ErrNotFound.Msgf("customer with id: `%s` does not exist", customerID)
 	}
 
 	return &models.Customer{
