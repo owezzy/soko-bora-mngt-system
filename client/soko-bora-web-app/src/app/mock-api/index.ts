@@ -9,13 +9,11 @@ import { MailboxMockApi } from 'app/mock-api/apps/mailbox/api';
 import { NotesMockApi } from 'app/mock-api/apps/notes/api';
 import { ScrumboardMockApi } from 'app/mock-api/apps/scrumboard/api';
 import { TasksMockApi } from 'app/mock-api/apps/tasks/api';
-import { AuthMockApi } from 'app/mock-api/common/auth/api';
 import { MessagesMockApi } from 'app/mock-api/common/messages/api';
 import { NavigationMockApi } from 'app/mock-api/common/navigation/api';
 import { NotificationsMockApi } from 'app/mock-api/common/notifications/api';
 import { SearchMockApi } from 'app/mock-api/common/search/api';
 import { ShortcutsMockApi } from 'app/mock-api/common/shortcuts/api';
-import { UserMockApi } from 'app/mock-api/common/user/api';
 import { AnalyticsMockApi } from 'app/mock-api/dashboards/analytics/api';
 import { CryptoMockApi } from 'app/mock-api/dashboards/crypto/api';
 import { FinanceMockApi } from 'app/mock-api/dashboards/finance/api';
@@ -28,7 +26,6 @@ export class MockApiService {
     academyMockApi = inject(AcademyMockApi);
     activitiesMockApi = inject(ActivitiesMockApi);
     analyticsMockApi = inject(AnalyticsMockApi);
-    authMockApi = inject(AuthMockApi);
     chatMockApi = inject(ChatMockApi);
     contactsMockApi = inject(ContactsMockApi);
     cryptoMockApi = inject(CryptoMockApi);
@@ -47,5 +44,4 @@ export class MockApiService {
     scrumboardMockApi = inject(ScrumboardMockApi);
     shortcutsMockApi = inject(ShortcutsMockApi);
     tasksMockApi = inject(TasksMockApi);
-    userMockApi = inject(UserMockApi);
 }
