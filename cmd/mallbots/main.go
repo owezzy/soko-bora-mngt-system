@@ -10,6 +10,7 @@ import (
 	"github.com/owezzy/soko-bora-mngt-system/cosec"
 	"github.com/owezzy/soko-bora-mngt-system/customers"
 	"github.com/owezzy/soko-bora-mngt-system/depot"
+	"github.com/owezzy/soko-bora-mngt-system/iam"
 	"github.com/owezzy/soko-bora-mngt-system/internal/config"
 	"github.com/owezzy/soko-bora-mngt-system/internal/system"
 	"github.com/owezzy/soko-bora-mngt-system/internal/web"
@@ -51,6 +52,7 @@ func run() (err error) {
 			&baskets.Module{},
 			&customers.Module{},
 			&depot.Module{},
+			&iam.Module{},
 			&notifications.Module{},
 			&ordering.Module{},
 			&payments.Module{},

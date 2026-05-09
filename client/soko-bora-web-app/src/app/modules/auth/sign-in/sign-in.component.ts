@@ -17,6 +17,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { fuseAnimations } from '@fuse/animations';
 import { FuseAlertComponent, FuseAlertType } from '@fuse/components/alert';
 import { AuthService } from 'app/core/auth/auth.service';
+import { first } from 'rxjs';
 
 @Component({
     selector: 'auth-sign-in',
@@ -73,6 +74,56 @@ export class AuthSignInComponent implements OnInit {
             password: ['admin', Validators.required],
             rememberMe: [''],
         });
+
+        this._activatedRoute.queryParamMap.pipe(first()).subscribe((params) => {
+            const authCode = params.get('auth_code');
+            const authError = params.get('auth_error');
+
+            if (authError) {
+                this.alert = {
+                    type: 'error',
+                    message: 'Google sign-in failed. Please try again.',
+                };
+                this.showAlert = true;
+                return;
+            }
+
+            if (!authCode) {
+                return;
+            }
+
+            void this._router.navigate([], {
+                relativeTo: this._activatedRoute,
+                queryParams: {
+                    auth_code: null,
+                    auth_error: null,
+                },
+                queryParamsHandling: 'merge',
+                replaceUrl: true,
+            });
+
+            this.signInForm.disable();
+            this.showAlert = false;
+
+            this._authService.exchangeCode(authCode).subscribe({
+                next: () => {
+                    const redirectURL =
+                        this._activatedRoute.snapshot.queryParamMap.get(
+                            'redirectURL'
+                        ) || '/signed-in-redirect';
+
+                    void this._router.navigateByUrl(redirectURL);
+                },
+                error: () => {
+                    this.signInForm.enable();
+                    this.alert = {
+                        type: 'error',
+                        message: 'Google sign-in expired. Please try again.',
+                    };
+                    this.showAlert = true;
+                },
+            });
+        });
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -126,5 +177,14 @@ export class AuthSignInComponent implements OnInit {
                 this.showAlert = true;
             }
         );
+    }
+
+    signInWithGoogle(): void {
+        const redirectURL =
+            this._activatedRoute.snapshot.queryParamMap.get('redirectURL') ||
+            '/signed-in-redirect';
+        const authURL = new URL('/api/auth/google/login', window.location.origin);
+        authURL.searchParams.set('redirectURL', redirectURL);
+        window.location.assign(authURL.toString());
     }
 }

@@ -113,6 +113,18 @@ export class AuthService {
             );
     }
 
+    exchangeCode(code: string): Observable<any> {
+        return this._httpClient.post('api/auth/exchange-code', { code }).pipe(
+            switchMap((response: any) => {
+                this.accessToken = response.accessToken;
+                this._authenticated = true;
+                this._userService.user = response.user;
+
+                return of(response);
+            })
+        );
+    }
+
     /**
      * Sign out
      */

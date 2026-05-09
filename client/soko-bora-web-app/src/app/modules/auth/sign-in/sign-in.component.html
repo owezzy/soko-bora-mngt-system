@@ -147,23 +147,13 @@
 
                 <!-- Single sign-on buttons -->
                 <div class="mt-8 flex items-center space-x-4">
-                    <button class="flex-auto" type="button" mat-stroked-button>
-                        <mat-icon
-                            class="icon-size-5"
-                            [svgIcon]="'feather:facebook'"
-                        ></mat-icon>
-                    </button>
-                    <button class="flex-auto" type="button" mat-stroked-button>
-                        <mat-icon
-                            class="icon-size-5"
-                            [svgIcon]="'feather:twitter'"
-                        ></mat-icon>
-                    </button>
-                    <button class="flex-auto" type="button" mat-stroked-button>
-                        <mat-icon
-                            class="icon-size-5"
-                            [svgIcon]="'feather:github'"
-                        ></mat-icon>
+                    <button
+                        class="flex-auto"
+                        type="button"
+                        mat-stroked-button
+                        (click)="signInWithGoogle()"
+                    >
+                        <span>Google</span>
                     </button>
                 </div>
             </form>

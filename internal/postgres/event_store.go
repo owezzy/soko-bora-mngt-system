@@ -116,7 +116,7 @@ func (s EventStore) Save(ctx context.Context, aggregate es.EventSourcedAggregate
 		)
 
 		values[i*7] = aggregateID
-		values[i*1+1] = aggregateName
+		values[i*7+1] = aggregateName
 		values[i*7+2] = event.AggregateVersion()
 		values[i*7+3] = event.ID()
 		values[i*7+4] = event.EventName()

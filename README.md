@@ -27,10 +27,10 @@
 <br />
 <div align="center">
   <a href="https://github.com/owezzy/soko-bora-mngt-system">
-    <img src="client/soko-bora-web-app/src/assets/images/logo/paper-bag.png" alt="Logo" width="80" height="80">
+    <img src="client/soko-bora-web-app/public/images/logo/logo.svg" alt="Logo" width="80" height="80">
   </a>
 
-<h3 align="center">Soko Bora Bots</h3>
+<h3 align="center">MallBots</h3>
 
   <p align="center">
 We have developed incredible robots to save the people's time shopping at the mall. Customers will now have access to a kiosk that would facilitate the selection of items from available stores that customers do not wish to visit. After completing their selections, the customer is free to do other shopping or directly visit the depot and wait for their items to be brought in by robots. The customer may pay when they arrive at the depot or may choose to wait for all items to arrive before doing so. After both are done, the transaction is complete, and the customer takes their items and goes on their merry way.
@@ -77,7 +77,30 @@ We have developed incredible robots to save the people's time shopping at the ma
 
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 High level view of the application components.
-Here's a blank template to get started: To avoid retyping too much info. Do a search and replace with your text editor for the following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`
+
+MallBots is a retail automation platform built around a futuristic shopping experience. Customers can
+use kiosk applications to build baskets without visiting each store, authorize payment, and check out
+while autonomous shopper bots handle fulfillment behind the scenes. This repository contains the
+backend services and frontend clients that power that flow.
+
+## Application services
+The core application services include Orders, Stores, Payments, Depot, Customers, Baskets, Search,
+Notifications, and the `cosec` saga coordinator. They communicate through domain and integration
+events, publish state changes through NATS JetStream, and expose gRPC and REST interfaces for the
+gateway and client layers.
+
+## API gateway services
+The gateway layer is intended to support multiple client experiences: a REST API for customer kiosks,
+an administrative interface for staff workflows, and automation-friendly APIs for robot clients. The
+project follows a Backend for Frontend (BFF) approach so each client surface can evolve around its own
+data and interaction needs while reusing the same underlying domain services.
+
+## Clients
+The expected clients in the MallBots ecosystem are:
+
+- Customer kiosks placed near mall entrances for fast self-service ordering
+- An administrative web application for staff to manage stores, fulfill pickups, and take payment
+- Shopper bot clients that perform autonomous shopping tasks for customers
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

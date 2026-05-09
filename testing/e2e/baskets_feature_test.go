@@ -17,7 +17,7 @@ import (
 	"github.com/owezzy/soko-bora-mngt-system/baskets/basketsclient/models"
 )
 
-type basketIDKey = struct{}
+type basketIDKey struct{}
 
 type basketsFeature struct {
 	client *basketsclient.ShoppingBaskets
@@ -44,6 +44,10 @@ func (c *basketsFeature) register(ctx *godog.ScenarioContext) {
 
 	ctx.Step(`^I add the items$`, c.iAddTheItems)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the items (?:were|are) added$`, c.expectTheItemsWereAdded)
+	ctx.Step(`^I check out the basket$`, c.iCheckOutTheBasket)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?the basket (?:was|is) checked out$`, c.expectTheBasketWasCheckedOut)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?the current basket has (\d+) item(?:s)?$`, c.expectTheCurrentBasketHasItems)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?the current basket total is "([^"]*)"$`, c.expectTheCurrentBasketTotalIs)
 }
 
 func (c *basketsFeature) reset() {
@@ -100,7 +104,7 @@ func (c *basketsFeature) iAddTheItems(ctx context.Context, table *godog.Table) (
 	}
 	for _, i := range items.([]*Item) {
 		productID := getProductID(ctx, i.Name)
-		resp, err := c.client.Item.AddItem(item.NewAddItemParams().WithID(basketID).WithBody(&models.AddItemParamsBody{
+		resp, err := c.client.Item.AddItem(item.NewAddItemParams().WithID(basketID).WithBody(&models.BasketServiceAddItemBody{
 			ProductID: productID,
 			Quantity:  int32(i.Quantity),
 		}))
@@ -119,6 +123,87 @@ func (c *basketsFeature) expectTheItemsWereAdded(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (c *basketsFeature) iCheckOutTheBasket(ctx context.Context) (context.Context, error) {
+	basketID, err := lastBasketID(ctx)
+	if err != nil {
+		return ctx, err
+	}
+	paymentID, err := lastPaymentID(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	resp, err := c.client.Basket.CheckoutBasket(basket.NewCheckoutBasketParams().WithID(basketID).WithBody(&models.BasketServiceCheckoutBasketBody{
+		PaymentID: paymentID,
+	}))
+	return setLastResponseAndError(ctx, resp, err), nil
+}
+
+func (c *basketsFeature) expectTheBasketWasCheckedOut(ctx context.Context) error {
+	if err := lastResponseWas(ctx, &basket.CheckoutBasketOK{}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *basketsFeature) expectTheCurrentBasketHasItems(ctx context.Context, expected int) error {
+	items, err := currentBasketItems(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(items) != expected {
+		return errors.ErrBadRequest.Msgf("expected `%d` basket items, got `%d`", expected, len(items))
+	}
+
+	return nil
+}
+
+func (c *basketsFeature) expectTheCurrentBasketTotalIs(ctx context.Context, expected float64) error {
+	total, err := currentBasketTotal(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !nearlyEqualFloat64(total, expected) {
+		return errors.ErrBadRequest.Msgf("expected basket total `%0.2f`, got `%0.2f`", expected, total)
+	}
+
+	return nil
+}
+
+func currentBasketItems(ctx context.Context) ([]*models.BasketspbItem, error) {
+	basketID, err := lastBasketID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := basketsclient.New(e2eTransport, strfmt.Default).Basket.GetBasket(basket.NewGetBasketParams().WithID(basketID))
+	if err != nil {
+		return nil, err
+	}
+	if resp.Payload == nil || resp.Payload.Basket == nil {
+		return nil, errors.ErrNotFound.Msg("basket payload was empty")
+	}
+
+	return resp.Payload.Basket.Items, nil
+}
+
+func currentBasketTotal(ctx context.Context) (float64, error) {
+	items, err := currentBasketItems(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	var total float64
+	for _, item := range items {
+		total += item.ProductPrice * float64(item.Quantity)
+	}
+
+	return total, nil
 }
 
 func lastBasketID(ctx context.Context) (string, error) {
