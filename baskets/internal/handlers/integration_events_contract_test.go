@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/pact-foundation/pact-go/v2/matchers"
 	"github.com/pact-foundation/pact-go/v2/message/v4"
@@ -13,11 +14,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/owezzy/soko-bora-mngt-system/internal/am"
 	"github.com/owezzy/soko-bora-mngt-system/baskets/internal/domain"
 	"github.com/owezzy/soko-bora-mngt-system/internal/ddd"
 	"github.com/owezzy/soko-bora-mngt-system/internal/registry"
 	"github.com/owezzy/soko-bora-mngt-system/internal/registry/serdes"
 	"github.com/owezzy/soko-bora-mngt-system/stores/storespb"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type String = matchers.String
@@ -25,15 +29,59 @@ type Map = matchers.Map
 
 var Like = matchers.Like
 
+type rawEvent struct {
+	Name    string
+	Payload json.RawMessage
+}
+
+type incomingMessage struct {
+	id         string
+	name       string
+	subject    string
+	data       []byte
+	metadata   ddd.Metadata
+	sentAt     time.Time
+	receivedAt time.Time
+}
+
+func (m incomingMessage) ID() string             { return m.id }
+func (m incomingMessage) Subject() string        { return m.subject }
+func (m incomingMessage) MessageName() string    { return m.name }
+func (m incomingMessage) Metadata() ddd.Metadata { return m.metadata }
+func (m incomingMessage) SentAt() time.Time      { return m.sentAt }
+func (m incomingMessage) ReceivedAt() time.Time  { return m.receivedAt }
+func (m incomingMessage) Data() []byte           { return m.data }
+func (m incomingMessage) Ack() error             { return nil }
+func (m incomingMessage) NAck() error            { return nil }
+func (m incomingMessage) Extend() error          { return nil }
+func (m incomingMessage) Kill() error            { return nil }
+
+func newIncomingEventMessage(event rawEvent) (am.IncomingMessage, error) {
+	data, err := proto.Marshal(&am.EventMessageData{
+		Payload:    event.Payload,
+		OccurredAt: timestamppb.Now(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+
+	return incomingMessage{
+		id:         event.Name,
+		name:       event.Name,
+		subject:    "",
+		data:       data,
+		metadata:   make(ddd.Metadata),
+		sentAt:     now,
+		receivedAt: now,
+	}, nil
+}
+
 func TestStoresConsumer(t *testing.T) {
 	type mocks struct {
 		stores   *domain.MockStoreCacheRepository
 		products *domain.MockProductCacheRepository
-	}
-
-	type rawEvent struct {
-		Name    string
-		Payload map[string]any
 	}
 
 	reg := registry.New()
@@ -97,20 +145,15 @@ func TestStoresConsumer(t *testing.T) {
 			if tc.on != nil {
 				tc.on(m)
 			}
-			handlers := NewIntegrationEventHandlers(m.stores, m.products)
-			msgConsumerFn := func(contents v4.MessageContents) error {
-				event := contents.Content.(*rawEvent)
-
-				data, err := json.Marshal(event.Payload)
+			handlers := NewIntegrationEventHandlers(reg, m.stores, m.products)
+			msgConsumerFn := func(message v4.AsynchronousMessage) error {
+				event := message.Body.(*rawEvent)
+				msg, err := newIncomingEventMessage(*event)
 				if err != nil {
 					return err
 				}
-				payload := reg.MustDeserialize(event.Name, data)
 
-				return handlers.HandleEvent(
-					context.Background(),
-					ddd.NewEvent(event.Name, payload),
-				)
+				return handlers.HandleMessage(context.Background(), msg)
 			}
 
 			message := pact.AddAsynchronousMessage()
