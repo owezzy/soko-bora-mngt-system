@@ -3,16 +3,9 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { DemoBootstrapStore } from 'app/core/demo-bootstrap/demo-bootstrap.store';
-import {
-    BasketGrpcService,
-    CustomerGrpcService,
-    OrderingGrpcService,
-    PaymentsGrpcService,
-    StoresGrpcService,
-} from 'connect/tokens';
+import { BasketGrpcService, CustomerGrpcService, StoresGrpcService } from 'connect/tokens';
 import type { Basket, Item as BasketItem } from 'proto/basketspb/api_pb';
 import type { Customer } from 'proto/customerspb/api_pb';
-import type { Order as OrderingOrder } from 'proto/orderingpb/api_pb';
 import type { GetDemoBootstrapResponse } from 'proto/searchpb/api_pb';
 import type { Product as StoreProduct, Store as MallStore } from 'proto/storespb/api_pb';
 
@@ -26,8 +19,6 @@ export class KioskService {
     private readonly bootstrapStore = inject(DemoBootstrapStore);
     private readonly customers = inject(CustomerGrpcService);
     private readonly baskets = inject(BasketGrpcService);
-    private readonly payments = inject(PaymentsGrpcService);
-    private readonly ordering = inject(OrderingGrpcService);
     private readonly stores = inject(StoresGrpcService);
 
     private readonly bootstrapSignal = toSignal(this.bootstrapStore.bootstrap$, {
@@ -36,8 +27,6 @@ export class KioskService {
 
     private readonly customerState = signal<Customer | null>(null);
     private readonly basketState = signal<Basket | null>(null);
-    private readonly paymentIdState = signal<string | null>(null);
-    private readonly orderState = signal<OrderingOrder | null>(null);
     private readonly busyState = signal(false);
     private readonly errorState = signal<string | null>(null);
     private readonly statusState = signal('Bootstrap loaded from the backend demo configuration.');
@@ -57,8 +46,6 @@ export class KioskService {
         return quantities;
     });
     readonly basketTotal = computed(() => this.calculateBasketTotal(this.basketItems()));
-    readonly order = computed(() => this.orderState());
-    readonly paymentId = computed(() => this.paymentIdState());
     readonly isBusy = computed(() => this.busyState());
     readonly error = computed(() => this.errorState());
     readonly statusMessage = computed(() => this.statusState());
@@ -89,7 +76,7 @@ export class KioskService {
             );
 
             this.storeSectionsState.set(catalogs);
-            this.statusState.set('Demo customer and live store catalog loaded from backend services.');
+            this.statusState.set('Demo customer, live store catalog, and basket-ready kiosk flow loaded from backend services.');
         });
     }
 
@@ -146,59 +133,6 @@ export class KioskService {
         });
     }
 
-    async checkout(): Promise<void> {
-        const bootstrap = this.requireBootstrap();
-        const customerId = this.requireCustomerId(bootstrap);
-        const basket = this.basketState();
-
-        if (!basket || basket.items.length === 0) {
-            this.errorState.set('Add at least one product before checking out.');
-            return;
-        }
-
-        const amount = this.basketTotal();
-
-        await this.run(async () => {
-            await firstValueFrom(this.customers.authorizeCustomer({ id: customerId }));
-
-            const payment = await firstValueFrom(
-                this.payments.authorizePayment({
-                    customerId,
-                    amount,
-                }),
-            );
-            this.paymentIdState.set(payment.id);
-
-            await firstValueFrom(
-                this.baskets.checkoutBasket({
-                    id: basket.id,
-                    paymentId: payment.id,
-                }),
-            );
-
-            this.statusState.set('Payment authorized and basket checked out. Waiting for order approval...');
-            const order = await this.waitForOrder(basket.id);
-            this.orderState.set(order);
-            this.statusState.set(`Order ${order.id} is ${order.status}.`);
-        });
-    }
-
-    async refreshOrder(): Promise<void> {
-        const orderId = this.orderState()?.id ?? this.basketState()?.id;
-        if (!orderId) {
-            return;
-        }
-
-        await this.run(async () => {
-            const response = await firstValueFrom(this.ordering.getOrder({ id: orderId }));
-            this.orderState.set(response.order ?? null);
-
-            if (response.order) {
-                this.statusState.set(`Order ${response.order.id} is ${response.order.status}.`);
-            }
-        });
-    }
-
     private async ensureBasket(customerId: string): Promise<string> {
         const existingBasket = this.basketState();
         if (existingBasket) {
@@ -217,25 +151,6 @@ export class KioskService {
 
         const response = await firstValueFrom(this.baskets.getBasket({ id: basketId }));
         this.basketState.set(response.basket ?? null);
-    }
-
-    private async waitForOrder(orderId: string): Promise<OrderingOrder> {
-        let lastError: unknown;
-
-        for (let attempt = 0; attempt < 10; attempt += 1) {
-            try {
-                const response = await firstValueFrom(this.ordering.getOrder({ id: orderId }));
-                if (response.order) {
-                    return response.order;
-                }
-            } catch (error: unknown) {
-                lastError = error;
-            }
-
-            await this.sleep(500);
-        }
-
-        throw lastError ?? new Error(`Order ${orderId} was not available before timeout.`);
     }
 
     private requireBootstrap(): GetDemoBootstrapResponse {
@@ -283,11 +198,5 @@ export class KioskService {
         }
 
         return 'The kiosk request failed unexpectedly.';
-    }
-
-    private sleep(ms: number): Promise<void> {
-        return new Promise((resolve) => {
-            window.setTimeout(resolve, ms);
-        });
     }
 }

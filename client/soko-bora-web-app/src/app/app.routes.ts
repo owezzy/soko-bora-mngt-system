@@ -74,7 +74,6 @@ export const appRoutes: Route[] = [
             initialData: initialDataResolver
         },
         children: [
-            {path: 'example', pathMatch: 'full', redirectTo: 'kiosk'},
             {path: 'kiosk', loadChildren: () => import('app/modules/admin/kiosk/kiosk.routes')},
         ]
     }
