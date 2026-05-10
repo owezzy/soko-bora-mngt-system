@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cucumber/messages-go/v16"
 	"github.com/cucumber/godog"
 	"github.com/go-openapi/runtime/client"
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -19,6 +20,7 @@ import (
 )
 
 var useMonoDB = flag.Bool("mono", false, "Use mono DB resources")
+var godogTags = flag.String("godog.tags", "", "Filter scenarios by tag expression")
 
 var assist = assistdog.NewDefault()
 
@@ -75,6 +77,9 @@ func TestEndToEnd(t *testing.T) {
 	}(
 		&basketsFeature{},
 		&customersFeature{},
+		&notificationsFeature{},
+		&ordersFeature{},
+		&paymentsFeature{},
 		&storesFeature{},
 	)
 	if err != nil {
@@ -98,17 +103,24 @@ func TestEndToEnd(t *testing.T) {
 				f.register(ctx)
 			}
 			ctx.Before(func(ctx context.Context, s *godog.Scenario) (context.Context, error) {
+				seededDemo := scenarioHasTag(s, "@seeded-demo")
 				for _, f := range features {
 					f.reset()
 				}
+				if seededDemo && cfg.useMonoDB {
+					if err := reseedSeededDemoMonolithState(ctx); err != nil {
+						return ctx, err
+					}
+				}
 
-				return ctx, nil
+				return setSeededDemoScenario(ctx, seededDemo), nil
 			})
 		},
 		Options: &godog.Options{
 			Format:    "pretty",
 			Paths:     featurePaths,
 			Randomize: -1,
+			Tags:      *godogTags,
 		},
 	}
 
@@ -117,13 +129,24 @@ func TestEndToEnd(t *testing.T) {
 	}
 }
 
+func scenarioHasTag(s *messages.Pickle, tag string) bool {
+	for _, pickleTag := range s.Tags {
+		if pickleTag.Name == tag {
+			return true
+		}
+	}
+
+	return false
+}
+
 func iReceiveAError(ctx context.Context, msg string) error {
 	err := lastError(ctx)
 	if err == nil {
 		return errors.Wrap(errors.ErrUnknown, "expected error to not be nil")
 	}
 
-	if !strings.Contains(err.Error(), "Message:"+msg) {
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "Message:"+msg) && !strings.Contains(errMsg, msg) {
 		return errors.Wrapf(errors.ErrInvalidArgument, "expected: %s: got: %s", msg, err.Error())
 	}
 
