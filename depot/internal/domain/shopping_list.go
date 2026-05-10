@@ -87,6 +87,8 @@ func (sl *ShoppingList) Initiate() error {
 		return ErrShoppingCannotBeInitiated
 	}
 
+	sl.Status = ShoppingListIsAvailable
+
 	sl.AddEvent(ShoppingListInitiatedEvent, &ShoppingListInitiated{
 		ShoppingList: sl,
 	})
