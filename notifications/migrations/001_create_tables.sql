@@ -19,6 +19,31 @@ CREATE TRIGGER updated_at_customers_trgr
   FOR EACH ROW
 EXECUTE PROCEDURE updated_at_trigger();
 
+CREATE TABLE notifications (
+  id          text        NOT NULL,
+  order_id    text        NOT NULL,
+  customer_id text        NOT NULL,
+  type        text        NOT NULL,
+  sms_number  text        NOT NULL,
+  message     text        NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT NOW(),
+  updated_at  timestamptz NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (id)
+);
+
+CREATE INDEX notifications_order_id_idx ON notifications (order_id);
+
+CREATE TRIGGER created_at_notifications_trgr
+  BEFORE UPDATE
+  ON notifications
+  FOR EACH ROW
+EXECUTE PROCEDURE created_at_trigger();
+CREATE TRIGGER updated_at_notifications_trgr
+  BEFORE UPDATE
+  ON notifications
+  FOR EACH ROW
+EXECUTE PROCEDURE updated_at_trigger();
+
 CREATE TABLE events (
   stream_id      text        NOT NULL,
   stream_name    text        NOT NULL,
@@ -89,6 +114,8 @@ EXECUTE PROCEDURE updated_at_trigger();
 
 -- +goose Down
 DROP TABLE IF EXISTS customers_cache;
+
+DROP TABLE IF EXISTS notifications;
 
 DROP TABLE IF EXISTS sagas;
 DROP TABLE IF EXISTS outbox;
