@@ -54,6 +54,10 @@ func (h domainHandlers[T]) HandleEvent(ctx context.Context, event T) (err error)
 	switch event.EventName() {
 	case domain.OrderCreatedEvent:
 		return h.onOrderCreated(ctx, event)
+	case domain.OrderRejectedEvent:
+		return h.onOrderRejected(ctx, event)
+	case domain.OrderApprovedEvent:
+		return h.onOrderApproved(ctx, event)
 	case domain.OrderReadiedEvent:
 		return h.onOrderReadied(ctx, event)
 	case domain.OrderCanceledEvent:

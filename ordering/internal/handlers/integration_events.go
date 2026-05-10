@@ -16,6 +16,7 @@ import (
 	"github.com/owezzy/soko-bora-mngt-system/ordering/internal/application"
 	"github.com/owezzy/soko-bora-mngt-system/ordering/internal/application/commands"
 	"github.com/owezzy/soko-bora-mngt-system/ordering/internal/domain"
+	"github.com/owezzy/soko-bora-mngt-system/payments/paymentspb"
 )
 
 type integrationHandlers[T ddd.Event] struct {
@@ -41,6 +42,13 @@ func RegisterIntegrationEventHandlers(subscriber am.MessageSubscriber, handlers 
 	_, err = subscriber.Subscribe(depotpb.ShoppingListAggregateChannel, handlers, am.MessageFilter{
 		depotpb.ShoppingListCompletedEvent,
 	}, am.GroupName("ordering-depot"))
+	if err != nil {
+		return err
+	}
+
+	_, err = subscriber.Subscribe(paymentspb.InvoiceAggregateChannel, handlers, am.MessageFilter{
+		paymentspb.InvoicePaidEvent,
+	}, am.GroupName("ordering-payments"))
 
 	return
 }
@@ -68,6 +76,8 @@ func (h integrationHandlers[T]) HandleEvent(ctx context.Context, event T) (err e
 		return h.onBasketCheckedOut(ctx, event)
 	case depotpb.ShoppingListCompletedEvent:
 		return h.onShoppingListCompleted(ctx, event)
+	case paymentspb.InvoicePaidEvent:
+		return h.onInvoicePaid(ctx, event)
 	}
 
 	return nil
@@ -100,4 +110,13 @@ func (h integrationHandlers[T]) onShoppingListCompleted(ctx context.Context, eve
 	payload := event.Payload().(*depotpb.ShoppingListCompleted)
 
 	return h.app.ReadyOrder(ctx, commands.ReadyOrder{ID: payload.GetOrderId()})
+}
+
+func (h integrationHandlers[T]) onInvoicePaid(ctx context.Context, event ddd.Event) error {
+	payload := event.Payload().(*paymentspb.InvoicePaid)
+
+	return h.app.CompleteOrder(ctx, commands.CompleteOrder{
+		ID:        payload.GetOrderId(),
+		InvoiceID: payload.GetId(),
+	})
 }

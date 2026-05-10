@@ -46,6 +46,7 @@ func RegisterIntegrationEventHandlers(subscriber am.MessageSubscriber, handlers 
 
 	if _, err = subscriber.Subscribe(orderingpb.OrderAggregateChannel, handlers, am.MessageFilter{
 		orderingpb.OrderCreatedEvent,
+		orderingpb.OrderApprovedEvent,
 		orderingpb.OrderReadiedEvent,
 		orderingpb.OrderCanceledEvent,
 		orderingpb.OrderCompletedEvent,
@@ -104,6 +105,8 @@ func (h integrationHandlers[T]) HandleEvent(ctx context.Context, event T) (err e
 		return h.onStoreRebranded(ctx, event)
 	case orderingpb.OrderCreatedEvent:
 		return h.onOrderCreated(ctx, event)
+	case orderingpb.OrderApprovedEvent:
+		return h.onOrderApproved(ctx, event)
 	case orderingpb.OrderReadiedEvent:
 		return h.onOrderReadied(ctx, event)
 	case orderingpb.OrderCanceledEvent:
@@ -195,6 +198,11 @@ func (h integrationHandlers[T]) onOrderCreated(ctx context.Context, event T) err
 func (h integrationHandlers[T]) onOrderReadied(ctx context.Context, event T) error {
 	payload := event.Payload().(*orderingpb.OrderReadied)
 	return h.orders.UpdateStatus(ctx, payload.GetId(), "Ready For Pickup")
+}
+
+func (h integrationHandlers[T]) onOrderApproved(ctx context.Context, event T) error {
+	payload := event.Payload().(*orderingpb.OrderApproved)
+	return h.orders.UpdateStatus(ctx, payload.GetId(), "Approved")
 }
 
 func (h integrationHandlers[T]) onOrderCanceled(ctx context.Context, event T) error {

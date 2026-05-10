@@ -28,6 +28,7 @@ import (
 	"github.com/owezzy/soko-bora-mngt-system/ordering/internal/handlers"
 	"github.com/owezzy/soko-bora-mngt-system/ordering/internal/rest"
 	"github.com/owezzy/soko-bora-mngt-system/ordering/orderingpb"
+	"github.com/owezzy/soko-bora-mngt-system/payments/paymentspb"
 )
 
 type Module struct{}
@@ -51,6 +52,9 @@ func Root(ctx context.Context, svc system.Service) (err error) {
 			return nil, err
 		}
 		if err := depotpb.Registrations(reg); err != nil {
+			return nil, err
+		}
+		if err := paymentspb.Registrations(reg); err != nil {
 			return nil, err
 		}
 		return reg, nil
