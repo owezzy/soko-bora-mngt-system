@@ -16,7 +16,7 @@ import (
 	"github.com/owezzy/soko-bora-mngt-system/customers/customersclient/models"
 )
 
-type customerIDKey = struct{}
+type customerIDKey struct{}
 
 type customersFeature struct {
 	client *customersclient.Customers
@@ -57,7 +57,7 @@ func (c *customersFeature) reset() {
 }
 
 func (c *customersFeature) iAmARegisteredCustomer(ctx context.Context) context.Context {
-	resp, err := c.client.Customer.CreateCustomer(customer.NewCreateCustomerParams().WithBody(&models.CustomerspbRegisterCustomerRequest{
+	resp, err := c.client.Customer.RegisterCustomer(customer.NewRegisterCustomerParams().WithBody(&models.CustomerspbRegisterCustomerRequest{
 		Name:      "RegisteredCustomer",
 		SmsNumber: "555-555-1212",
 	}))
@@ -69,7 +69,7 @@ func (c *customersFeature) iAmARegisteredCustomer(ctx context.Context) context.C
 }
 
 func (c *customersFeature) iRegisterANewCustomerAs(ctx context.Context, name string) context.Context {
-	resp, err := c.client.Customer.CreateCustomer(customer.NewCreateCustomerParams().WithBody(&models.CustomerspbRegisterCustomerRequest{
+	resp, err := c.client.Customer.RegisterCustomer(customer.NewRegisterCustomerParams().WithBody(&models.CustomerspbRegisterCustomerRequest{
 		Name:      name,
 		SmsNumber: "555-555-1212",
 	}))
@@ -105,7 +105,7 @@ func (c *customersFeature) expectNoCustomerNamedToExist(name string) error {
 }
 
 func (c *customersFeature) expectTheCustomerWasCreated(ctx context.Context) error {
-	if err := lastResponseWas(ctx, &customer.CreateCustomerOK{}); err != nil {
+	if err := lastResponseWas(ctx, &customer.RegisterCustomerOK{}); err != nil {
 		return err
 	}
 
