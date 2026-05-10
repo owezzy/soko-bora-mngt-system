@@ -3,10 +3,10 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { DemoBootstrapStore } from 'app/core/demo-bootstrap/demo-bootstrap.store';
-import { BasketGrpcService, CustomerGrpcService, StoresGrpcService } from 'connect/tokens';
+import { BasketGrpcService, CustomerGrpcService, PaymentsGrpcService, SearchGrpcService, StoresGrpcService } from 'connect/tokens';
 import type { Basket, Item as BasketItem } from 'proto/basketspb/api_pb';
 import type { Customer } from 'proto/customerspb/api_pb';
-import type { GetDemoBootstrapResponse } from 'proto/searchpb/api_pb';
+import type { GetDemoBootstrapResponse, Order as SearchOrder } from 'proto/searchpb/api_pb';
 import type { Product as StoreProduct, Store as MallStore } from 'proto/storespb/api_pb';
 
 interface KioskStoreSection {
@@ -19,6 +19,8 @@ export class KioskService {
     private readonly bootstrapStore = inject(DemoBootstrapStore);
     private readonly customers = inject(CustomerGrpcService);
     private readonly baskets = inject(BasketGrpcService);
+    private readonly payments = inject(PaymentsGrpcService);
+    private readonly search = inject(SearchGrpcService);
     private readonly stores = inject(StoresGrpcService);
 
     private readonly bootstrapSignal = toSignal(this.bootstrapStore.bootstrap$, {
@@ -27,6 +29,9 @@ export class KioskService {
 
     private readonly customerState = signal<Customer | null>(null);
     private readonly basketState = signal<Basket | null>(null);
+    private readonly paymentIdState = signal<string | null>(null);
+    private readonly orderLookupIdState = signal<string | null>(null);
+    private readonly orderState = signal<SearchOrder | null>(null);
     private readonly busyState = signal(false);
     private readonly errorState = signal<string | null>(null);
     private readonly statusState = signal('Bootstrap loaded from the backend demo configuration.');
@@ -46,6 +51,8 @@ export class KioskService {
         return quantities;
     });
     readonly basketTotal = computed(() => this.calculateBasketTotal(this.basketItems()));
+    readonly paymentId = computed(() => this.paymentIdState());
+    readonly order = computed(() => this.orderState());
     readonly isBusy = computed(() => this.busyState());
     readonly error = computed(() => this.errorState());
     readonly statusMessage = computed(() => this.statusState());
@@ -76,7 +83,7 @@ export class KioskService {
             );
 
             this.storeSectionsState.set(catalogs);
-            this.statusState.set('Demo customer, live store catalog, and basket-ready kiosk flow loaded from backend services.');
+            this.statusState.set('Demo customer, live store catalog, and checkout-ready kiosk flow loaded from backend services.');
         });
     }
 
@@ -133,6 +140,64 @@ export class KioskService {
         });
     }
 
+    async checkout(): Promise<void> {
+        const bootstrap = this.requireBootstrap();
+        const customerId = this.requireCustomerId(bootstrap);
+        const basket = this.basketState();
+
+        if (!basket || basket.items.length === 0) {
+            this.errorState.set('Add at least one product before checking out.');
+            return;
+        }
+
+        const amount = this.basketTotal();
+
+        await this.run(async () => {
+            const payment = await firstValueFrom(
+                this.payments.authorizePayment({
+                    customerId,
+                    amount,
+                }),
+            );
+            this.paymentIdState.set(payment.id);
+            this.orderLookupIdState.set(basket.id);
+
+            await firstValueFrom(
+                this.baskets.checkoutBasket({
+                    id: basket.id,
+                    paymentId: payment.id,
+                }),
+            );
+
+            await this.refreshBasket(basket.id);
+            this.statusState.set('Checkout submitted. Waiting for the live search projection to publish the order status...');
+
+            const order = await this.waitForOrderProjection(basket.id);
+            if (order) {
+                this.orderState.set(order);
+                this.statusState.set(`Order ${order.orderId} is ${order.status}.`);
+            }
+        });
+    }
+
+    async refreshOrder(): Promise<void> {
+        const orderId = this.orderState()?.orderId ?? this.orderLookupIdState() ?? this.basketState()?.id;
+        if (!orderId) {
+            return;
+        }
+
+        await this.run(async () => {
+            const order = await this.fetchOrderProjection(orderId);
+            if (!order) {
+                throw new Error(`Order ${orderId} is not visible in search yet.`);
+            }
+
+            this.orderState.set(order);
+            this.orderLookupIdState.set(order.orderId);
+            this.statusState.set(`Order ${order.orderId} is ${order.status}.`);
+        });
+    }
+
     private async ensureBasket(customerId: string): Promise<string> {
         const existingBasket = this.basketState();
         if (existingBasket) {
@@ -151,6 +216,28 @@ export class KioskService {
 
         const response = await firstValueFrom(this.baskets.getBasket({ id: basketId }));
         this.basketState.set(response.basket ?? null);
+    }
+
+    private async waitForOrderProjection(orderId: string): Promise<SearchOrder | null> {
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+            try {
+                const order = await this.fetchOrderProjection(orderId);
+                if (order) {
+                    return order;
+                }
+            } catch {
+                // Search projection is eventually consistent with the saga.
+            }
+
+            await this.sleep(500);
+        }
+
+        return null;
+    }
+
+    private async fetchOrderProjection(orderId: string): Promise<SearchOrder | null> {
+        const response = await firstValueFrom(this.search.getOrder({ id: orderId }));
+        return response.order ?? null;
     }
 
     private requireBootstrap(): GetDemoBootstrapResponse {
@@ -198,5 +285,11 @@ export class KioskService {
         }
 
         return 'The kiosk request failed unexpectedly.';
+    }
+
+    private sleep(ms: number): Promise<void> {
+        return new Promise((resolve) => {
+            window.setTimeout(resolve, ms);
+        });
     }
 }

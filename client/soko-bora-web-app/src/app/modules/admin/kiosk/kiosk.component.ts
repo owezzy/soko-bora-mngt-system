@@ -24,4 +24,12 @@ export class KioskComponent implements OnInit {
     removeProduct(productId: string): void {
         void this.kiosk.removeProduct(productId);
     }
+
+    checkout(): void {
+        void this.kiosk.checkout();
+    }
+
+    refreshOrder(): void {
+        void this.kiosk.refreshOrder();
+    }
 }

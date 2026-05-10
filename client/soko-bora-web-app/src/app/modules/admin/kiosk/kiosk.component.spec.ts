@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { Customer } from 'proto/customerspb/api_pb';
-import type { GetDemoBootstrapResponse } from 'proto/searchpb/api_pb';
+import type { GetDemoBootstrapResponse, Order as SearchOrder } from 'proto/searchpb/api_pb';
 import type { Product as StoreProduct, Store as MallStore } from 'proto/storespb/api_pb';
 import { KioskService } from 'app/core/kiosk/kiosk.service';
 import { KioskComponent } from 'app/modules/admin/kiosk/kiosk.component';
@@ -65,6 +65,8 @@ describe('KioskComponent', () => {
         basketItems: signal([]),
         basketQuantities: signal({}),
         basketTotal: signal(0),
+        paymentId: signal<string | null>(null),
+        order: signal<SearchOrder | null>(null),
         isBusy: signal(false),
         error: signal<string | null>(null),
         statusMessage: signal('Bootstrap loaded from the backend demo configuration.'),
@@ -78,6 +80,8 @@ describe('KioskComponent', () => {
         loadCustomer: () => Promise.resolve(),
         addProduct: () => Promise.resolve(),
         removeProduct: () => Promise.resolve(),
+        checkout: () => Promise.resolve(),
+        refreshOrder: () => Promise.resolve(),
     } satisfies Partial<KioskService>;
 
     beforeEach(async () => {
@@ -85,6 +89,8 @@ describe('KioskComponent', () => {
         mockKioskService.basketItems.set([]);
         mockKioskService.basketQuantities.set({});
         mockKioskService.basketTotal.set(0);
+        mockKioskService.paymentId.set(null);
+        mockKioskService.order.set(null);
         mockKioskService.error.set(null);
         mockKioskService.statusMessage.set('Bootstrap loaded from the backend demo configuration.');
 
@@ -113,8 +119,8 @@ describe('KioskComponent', () => {
         expect(text).toContain('Fresh bananas from the live catalog');
         expect(text).toContain('SKU BNN-001');
         expect(text).toContain('Add a product to create a real backend basket');
-        expect(text).toContain('How to demo this slice');
-        expect(text).toContain('Checkout and final order status are intentionally excluded from this slice');
+        expect(text).toContain('Order status');
+        expect(text).toContain('No order is visible yet. Check out the basket to start the saga.');
     });
 
     it('shows basket totals when a real basket exists', () => {
@@ -146,5 +152,37 @@ describe('KioskComponent', () => {
         expect(text).toContain('basket-1');
         expect(text).toContain('2 x KES 6.00');
         expect(text).toContain('KES 12.00');
+        expect(text).toContain('Authorize payment and checkout');
+    });
+
+    it('shows live order projection details after checkout', () => {
+        mockKioskService.order.set({
+            $typeName: 'searchpb.Order',
+            orderId: 'order-1',
+            customerId: 'customer-1',
+            customerName: 'Demo Shopper',
+            total: 12,
+            status: 'Ready For Pickup',
+            items: [
+                {
+                    $typeName: 'searchpb.Order.Item',
+                    productId: 'product-1',
+                    storeId: 'store-1',
+                    productName: 'Bananas',
+                    storeName: 'Fresh Harvest Grocers',
+                    price: 6,
+                    quantity: BigInt(2),
+                },
+            ],
+        });
+
+        fixture.detectChanges();
+
+        const text = fixture.nativeElement.textContent as string;
+
+        expect(text).toContain('Order order-1 is Ready For Pickup.');
+        expect(text).toContain('Projected basket total');
+        expect(text).toContain('KES 12.00');
+        expect(text).toContain('Ready For Pickup');
     });
 });
