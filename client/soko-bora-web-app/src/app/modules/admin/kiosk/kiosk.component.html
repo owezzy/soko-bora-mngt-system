@@ -7,7 +7,7 @@
                         <div>
                             <div class="text-2xl font-semibold">Monolith kiosk demo</div>
                             <div class="mt-2 text-secondary">
-                                The kiosk now uses backend bootstrap plus live Customers, Stores, Baskets, Payments, and Ordering services.
+                                Browse the seeded mall catalog, build a real basket, submit checkout, and follow the live order state from the backend search projection.
                             </div>
                         </div>
 
@@ -44,7 +44,7 @@
                                         <span class="rounded-full bg-gray-100 px-3 py-1">Stores</span>
                                         <span class="rounded-full bg-gray-100 px-3 py-1">Baskets</span>
                                         <span class="rounded-full bg-gray-100 px-3 py-1">Payments</span>
-                                        <span class="rounded-full bg-gray-100 px-3 py-1">Ordering</span>
+                                        <span class="rounded-full bg-gray-100 px-3 py-1">Search orders</span>
                                     </div>
                                 </div>
                             </div>
@@ -109,7 +109,7 @@
                         <div class="rounded-2xl bg-card p-6 shadow">
                             <div class="text-xl font-semibold">Basket</div>
                             <div class="mt-2 text-secondary">
-                                Basket operations go through the live Basket service.
+                                Basket operations go through the live Basket service so shoppers can build a real demo basket.
                             </div>
 
                             @if (kiosk.basket(); as basket) {
@@ -135,6 +135,11 @@
                                     <span class="text-lg font-semibold">KES {{ kiosk.basketTotal() | number:'1.2-2' }}</span>
                                 </div>
 
+                                <div class="mt-4 rounded-xl border border-gray-200 p-4">
+                                    <div class="text-sm font-medium text-secondary">Authorized payment</div>
+                                    <div class="mt-1 break-all text-sm">{{ kiosk.paymentId() ?? 'A payment id will appear after checkout starts.' }}</div>
+                                </div>
+
                                 <button
                                     type="button"
                                     class="mt-4 w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -150,26 +155,21 @@
                         </div>
 
                         <div class="rounded-2xl bg-card p-6 shadow">
-                            <div class="text-xl font-semibold">Checkout and order tracking</div>
+                            <div class="text-xl font-semibold">Order status</div>
                             <div class="mt-2 text-secondary">
-                                Payments are authorized before basket checkout, then the Ordering service is polled until the order becomes visible.
+                                After checkout, the kiosk reads order state from the live backend search path so the shopper sees the saga outcome instead of a local shortcut.
                             </div>
 
                             <div class="mt-4 space-y-4">
                                 <div class="rounded-xl border border-gray-200 p-4">
-                                    <div class="text-sm font-medium text-secondary">Authorized payment</div>
-                                    <div class="mt-1 break-all text-sm">{{ kiosk.paymentId() ?? 'Not authorized yet' }}</div>
-                                </div>
-
-                                <div class="rounded-xl border border-gray-200 p-4">
                                     <div class="flex items-center justify-between gap-4">
                                         <div>
-                                            <div class="text-sm font-medium text-secondary">Ordering status</div>
+                                            <div class="text-sm font-medium text-secondary">Search projection</div>
                                             <div class="mt-1 text-sm">
                                                 @if (kiosk.order(); as order) {
-                                                    <span>Order {{ order.id }} is {{ order.status | titlecase }}.</span>
+                                                    <span>Order {{ order.orderId }} is {{ order.status }}.</span>
                                                 } @else {
-                                                    <span>No order has been created yet.</span>
+                                                    <span>No order is visible yet. Check out the basket to start the saga.</span>
                                                 }
                                             </div>
                                         </div>
@@ -186,10 +186,18 @@
 
                                 @if (kiosk.order(); as order) {
                                     <div class="rounded-xl border border-gray-200 p-4">
-                                        <div class="text-sm font-medium text-secondary">Order items</div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div>
+                                                <div class="text-sm font-medium text-secondary">Projected basket total</div>
+                                                <div class="mt-1 text-lg font-semibold">KES {{ order.total | number:'1.2-2' }}</div>
+                                            </div>
+                                            <div class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                                                {{ order.status }}
+                                            </div>
+                                        </div>
 
-                                        <div class="mt-3 space-y-3">
-                                            @for (item of order.items; track item.productId) {
+                                        <div class="mt-4 space-y-3">
+                                            @for (item of order.items; track item.productId + '-' + item.storeId) {
                                                 <div class="rounded-lg bg-gray-50 px-4 py-3">
                                                     <div class="font-medium">{{ item.productName }}</div>
                                                     <div class="mt-1 text-sm text-secondary">{{ item.storeName }}</div>

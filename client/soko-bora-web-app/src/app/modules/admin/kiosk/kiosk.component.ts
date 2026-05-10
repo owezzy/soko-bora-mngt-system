@@ -1,11 +1,11 @@
-import { DecimalPipe, TitleCasePipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit, ViewEncapsulation } from '@angular/core';
 import type { Product as StoreProduct } from 'proto/storespb/api_pb';
 import { KioskService } from 'app/core/kiosk/kiosk.service';
 
 @Component({
     selector: 'kiosk',
-    imports: [DecimalPipe, TitleCasePipe],
+    imports: [DecimalPipe],
     templateUrl: './kiosk.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     encapsulation: ViewEncapsulation.None,

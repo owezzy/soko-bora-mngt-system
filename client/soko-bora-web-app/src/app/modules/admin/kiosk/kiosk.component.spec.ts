@@ -1,15 +1,13 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { Customer } from 'proto/customerspb/api_pb';
-import type { Order } from 'proto/orderingpb/api_pb';
-import type { GetDemoBootstrapResponse } from 'proto/searchpb/api_pb';
+import type { GetDemoBootstrapResponse, Order as SearchOrder } from 'proto/searchpb/api_pb';
 import type { Product as StoreProduct, Store as MallStore } from 'proto/storespb/api_pb';
 import { KioskService } from 'app/core/kiosk/kiosk.service';
 import { KioskComponent } from 'app/modules/admin/kiosk/kiosk.component';
 
 describe('KioskComponent', () => {
     let fixture: ComponentFixture<KioskComponent>;
-    const orderSignal = signal<Order | null>(null);
 
     const bootstrap: GetDemoBootstrapResponse = {
         $typeName: 'searchpb.GetDemoBootstrapResponse',
@@ -68,7 +66,7 @@ describe('KioskComponent', () => {
         basketQuantities: signal({}),
         basketTotal: signal(0),
         paymentId: signal<string | null>(null),
-        order: orderSignal.asReadonly(),
+        order: signal<SearchOrder | null>(null),
         isBusy: signal(false),
         error: signal<string | null>(null),
         statusMessage: signal('Bootstrap loaded from the backend demo configuration.'),
@@ -87,7 +85,14 @@ describe('KioskComponent', () => {
     } satisfies Partial<KioskService>;
 
     beforeEach(async () => {
-        orderSignal.set(null);
+        mockKioskService.basket.set(null);
+        mockKioskService.basketItems.set([]);
+        mockKioskService.basketQuantities.set({});
+        mockKioskService.basketTotal.set(0);
+        mockKioskService.paymentId.set(null);
+        mockKioskService.order.set(null);
+        mockKioskService.error.set(null);
+        mockKioskService.statusMessage.set('Bootstrap loaded from the backend demo configuration.');
 
         await TestBed.configureTestingModule({
             imports: [KioskComponent],
@@ -114,20 +119,70 @@ describe('KioskComponent', () => {
         expect(text).toContain('Fresh bananas from the live catalog');
         expect(text).toContain('SKU BNN-001');
         expect(text).toContain('Add a product to create a real backend basket');
+        expect(text).toContain('Order status');
+        expect(text).toContain('No order is visible yet. Check out the basket to start the saga.');
     });
 
-    it('renders the current order status when an order exists', () => {
-        orderSignal.set({
-            $typeName: 'orderingpb.Order',
-            id: 'order-1',
+    it('shows basket totals when a real basket exists', () => {
+        mockKioskService.basket.set({
+            $typeName: 'basketspb.Basket',
+            id: 'basket-1',
             customerId: 'customer-1',
-            paymentId: 'payment-1',
-            items: [],
-            status: 'approved',
-        } satisfies Order);
+            items: [
+                {
+                    $typeName: 'basketspb.Item',
+                    productId: 'product-1',
+                    productName: 'Bananas',
+                    productPrice: 6,
+                    quantity: 2,
+                    storeId: 'store-1',
+                    storeName: 'Fresh Harvest Grocers',
+                },
+            ],
+            checkedOut: false,
+        });
+        mockKioskService.basketItems.set(mockKioskService.basket().items);
+        mockKioskService.basketQuantities.set({ 'product-1': 2 });
+        mockKioskService.basketTotal.set(12);
+        fixture.detectChanges();
+
+        const text = fixture.nativeElement.textContent as string;
+
+        expect(text).toContain('Basket ID');
+        expect(text).toContain('basket-1');
+        expect(text).toContain('2 x KES 6.00');
+        expect(text).toContain('KES 12.00');
+        expect(text).toContain('Authorize payment and checkout');
+    });
+
+    it('shows live order projection details after checkout', () => {
+        mockKioskService.order.set({
+            $typeName: 'searchpb.Order',
+            orderId: 'order-1',
+            customerId: 'customer-1',
+            customerName: 'Demo Shopper',
+            total: 12,
+            status: 'Ready For Pickup',
+            items: [
+                {
+                    $typeName: 'searchpb.Order.Item',
+                    productId: 'product-1',
+                    storeId: 'store-1',
+                    productName: 'Bananas',
+                    storeName: 'Fresh Harvest Grocers',
+                    price: 6,
+                    quantity: BigInt(2),
+                },
+            ],
+        });
 
         fixture.detectChanges();
 
-        expect(fixture.nativeElement.textContent as string).toContain('Order order-1 is Approved.');
+        const text = fixture.nativeElement.textContent as string;
+
+        expect(text).toContain('Order order-1 is Ready For Pickup.');
+        expect(text).toContain('Projected basket total');
+        expect(text).toContain('KES 12.00');
+        expect(text).toContain('Ready For Pickup');
     });
 });
