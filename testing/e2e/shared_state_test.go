@@ -6,6 +6,9 @@ import (
 	"context"
 	"math"
 
+	"github.com/go-openapi/strfmt"
+	basketsclient "github.com/owezzy/soko-bora-mngt-system/baskets/basketsclient"
+	"github.com/owezzy/soko-bora-mngt-system/baskets/basketsclient/basket"
 	basketmodels "github.com/owezzy/soko-bora-mngt-system/baskets/basketsclient/models"
 	"github.com/stackus/errors"
 )
@@ -52,13 +55,27 @@ func setCurrentBasketItems(ctx context.Context, items []*basketmodels.BasketspbI
 
 func currentBasketItems(ctx context.Context) ([]basketItemSnapshot, error) {
 	v := ctx.Value(basketItemsKey{})
-	if v == nil {
-		return nil, errors.ErrNotFound.Msg("no basket items are available")
+	if v != nil {
+		items, ok := v.([]basketItemSnapshot)
+		if !ok {
+			return nil, errors.ErrInternal.Msg("basket items are in an unexpected format")
+		}
+
+		return items, nil
 	}
 
-	items, ok := v.([]basketItemSnapshot)
-	if !ok {
-		return nil, errors.ErrInternal.Msg("basket items are in an unexpected format")
+	resp, err := currentBasketResponse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]basketItemSnapshot, len(resp.Payload.Basket.Items))
+	for i, item := range resp.Payload.Basket.Items {
+		items[i] = basketItemSnapshot{
+			ProductID: item.ProductID,
+			StoreID:   item.StoreID,
+			Quantity:  item.Quantity,
+		}
 	}
 
 	return items, nil
@@ -66,16 +83,43 @@ func currentBasketItems(ctx context.Context) ([]basketItemSnapshot, error) {
 
 func currentBasketTotal(ctx context.Context) (float64, error) {
 	v := ctx.Value(basketTotalKey{})
-	if v == nil {
-		return 0, errors.ErrNotFound.Msg("no basket snapshot is available to calculate total")
+	if v != nil {
+		total, ok := v.(float64)
+		if !ok {
+			return 0, errors.ErrInternal.Msg("basket total is in an unexpected format")
+		}
+
+		return total, nil
 	}
 
-	total, ok := v.(float64)
-	if !ok {
-		return 0, errors.ErrInternal.Msg("basket total is in an unexpected format")
+	resp, err := currentBasketResponse(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	var total float64
+	for _, item := range resp.Payload.Basket.Items {
+		total += item.ProductPrice * float64(item.Quantity)
 	}
 
 	return total, nil
+}
+
+func currentBasketResponse(ctx context.Context) (*basket.GetBasketOK, error) {
+	basketID, err := lastBasketID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := basketsclient.New(e2eTransport, strfmt.Default).Basket.GetBasket(basket.NewGetBasketParams().WithID(basketID))
+	if err != nil {
+		return nil, err
+	}
+	if resp.Payload == nil || resp.Payload.Basket == nil {
+		return nil, errors.ErrNotFound.Msg("basket payload was empty")
+	}
+
+	return resp, nil
 }
 
 func nearlyEqualFloat64(a, b float64) bool {

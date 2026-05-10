@@ -23,6 +23,7 @@ var useMonoDB = flag.Bool("mono", false, "Use mono DB resources")
 var godogTags = flag.String("godog.tags", "", "Filter scenarios by tag expression")
 
 var assist = assistdog.NewDefault()
+var e2eTransport *client.Runtime
 
 type lastResponseKey struct{}
 type lastErrorKey struct{}
@@ -63,6 +64,7 @@ func TestEndToEnd(t *testing.T) {
 		transport: client.New("localhost:8080", "/", nil),
 		useMonoDB: *useMonoDB,
 	}
+	e2eTransport = cfg.transport
 
 	features, err := func(fs ...feature) ([]feature, error) {
 		features := make([]feature, len(fs))
@@ -145,8 +147,7 @@ func iReceiveAError(ctx context.Context, msg string) error {
 		return errors.Wrap(errors.ErrUnknown, "expected error to not be nil")
 	}
 
-	errMsg := err.Error()
-	if !strings.Contains(errMsg, "Message:"+msg) && !strings.Contains(errMsg, msg) {
+	if !strings.Contains(err.Error(), msg) {
 		return errors.Wrapf(errors.ErrInvalidArgument, "expected: %s: got: %s", msg, err.Error())
 	}
 

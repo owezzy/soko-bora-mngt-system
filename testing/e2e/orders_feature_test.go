@@ -98,6 +98,7 @@ func (c *ordersFeature) reset() {
 	truncate("ordering.snapshots")
 	truncate("ordering.inbox")
 	truncate("ordering.outbox")
+	truncate("ordering.sagas")
 	truncate("depot.shopping_lists")
 	truncate("depot.inbox")
 	truncate("depot.outbox")

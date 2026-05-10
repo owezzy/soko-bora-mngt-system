@@ -43,6 +43,8 @@ func (c *paymentsFeature) register(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I authorize payment for the basket total$`, c.iAuthorizePaymentForTheBasketTotal)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the payment (?:was|is) authorized$`, c.expectThePaymentWasAuthorized)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?a payment record exists for the basket total$`, c.expectAPaymentRecordExistsForTheBasketTotal)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?a payment record exists for customer "([^"]*)" and amount "([^"]*)"$`, c.expectAPaymentRecordExistsForCustomerAndAmount)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?the authorized payment id is available$`, c.expectTheAuthorizedPaymentIDIsAvailable)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the authorized payment belongs to the current customer$`, c.expectTheAuthorizedPaymentBelongsToTheCurrentCustomer)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the authorized payment amount is "([^"]*)"$`, c.expectTheAuthorizedPaymentAmountIs)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?an invoice exists for the checked out basket$`, c.expectAnInvoiceExistsForTheCheckedOutBasket)
@@ -103,16 +105,25 @@ func (c *paymentsFeature) expectAPaymentRecordExistsForTheBasketTotal(ctx contex
 		return err
 	}
 
+	return c.expectAPaymentRecordExistsForCustomerAndAmount(customerID, total)
+}
+
+func (c *paymentsFeature) expectAPaymentRecordExistsForCustomerAndAmount(customerID string, amount float64) error {
 	var paymentID string
-	row := c.db.QueryRow("SELECT id FROM payments.payments WHERE customer_id = $1 AND amount = $2", customerID, total)
-	if err = row.Scan(&paymentID); err != nil {
+	row := c.db.QueryRow("SELECT id FROM payments.payments WHERE customer_id = $1 AND amount = $2", customerID, amount)
+	if err := row.Scan(&paymentID); err != nil {
 		if err == sql.ErrNoRows {
-			return errors.ErrNotFound.Msgf("payment for customer `%s` and amount `%0.2f` does not exist", customerID, total)
+			return errors.ErrNotFound.Msgf("payment for customer `%s` and amount `%0.2f` does not exist", customerID, amount)
 		}
 		return err
 	}
 
 	return nil
+}
+
+func (c *paymentsFeature) expectTheAuthorizedPaymentIDIsAvailable(ctx context.Context) error {
+	_, err := lastPaymentID(ctx)
+	return err
 }
 
 func (c *paymentsFeature) expectTheAuthorizedPaymentBelongsToTheCurrentCustomer(ctx context.Context) error {
@@ -183,7 +194,7 @@ func (c *paymentsFeature) expectTheInvoiceStatusIs(ctx context.Context, expected
 		return err
 	}
 
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(orderPropagationTimeout)
 	for time.Now().Before(deadline) {
 		var status string
 		row := c.db.QueryRow("SELECT status FROM payments.invoices WHERE id = $1", invoiceID)
@@ -202,7 +213,7 @@ func (c *paymentsFeature) waitForInvoiceID(ctx context.Context) (string, error) 
 		return "", err
 	}
 
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(orderPropagationTimeout)
 	for time.Now().Before(deadline) {
 		var invoiceID string
 		row := c.db.QueryRow("SELECT id FROM payments.invoices WHERE order_id = $1", orderID)

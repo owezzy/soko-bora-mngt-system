@@ -48,9 +48,11 @@ func (c *basketsFeature) register(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I add the items$`, c.iAddTheItems)
 	ctx.Step(`^I add the seeded demo items$`, c.iAddTheSeededDemoItems)
 	ctx.Step(`^I check out the basket$`, c.iCheckOutTheBasket)
-	ctx.Step(`^(?:I )?(?:ensure |expect )?the basket is checked out$`, c.expectTheBasketIsCheckedOut)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?the basket (?:was|is) checked out$`, c.expectTheBasketWasCheckedOut)
 	ctx.Step(`^I fetch the basket snapshot$`, c.iFetchTheBasketSnapshot)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the items (?:were|are) added$`, c.expectTheItemsWereAdded)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?the current basket has (\d+) item(?:s)?$`, c.expectTheCurrentBasketHasItems)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?the current basket total is "([^"]*)"$`, c.expectTheCurrentBasketTotalIs)
 }
 
 func (c *basketsFeature) reset() {
@@ -167,8 +169,12 @@ func (c *basketsFeature) iCheckOutTheBasket(ctx context.Context) (context.Contex
 	return ctx, nil
 }
 
-func (c *basketsFeature) expectTheBasketIsCheckedOut(ctx context.Context) error {
-	return lastResponseWas(ctx, &basket.CheckoutBasketOK{})
+func (c *basketsFeature) expectTheBasketWasCheckedOut(ctx context.Context) error {
+	if err := lastResponseWas(ctx, &basket.CheckoutBasketOK{}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *basketsFeature) iFetchTheBasketSnapshot(ctx context.Context) (context.Context, error) {
@@ -188,6 +194,32 @@ func (c *basketsFeature) iFetchTheBasketSnapshot(ctx context.Context) (context.C
 	}
 
 	return setCurrentBasketItems(ctx, resp.Payload.Basket.Items), nil
+}
+
+func (c *basketsFeature) expectTheCurrentBasketHasItems(ctx context.Context, expected int) error {
+	items, err := currentBasketItems(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(items) != expected {
+		return errors.ErrBadRequest.Msgf("expected `%d` basket items, got `%d`", expected, len(items))
+	}
+
+	return nil
+}
+
+func (c *basketsFeature) expectTheCurrentBasketTotalIs(ctx context.Context, expected float64) error {
+	total, err := currentBasketTotal(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !nearlyEqualFloat64(total, expected) {
+		return errors.ErrBadRequest.Msgf("expected basket total `%0.2f`, got `%0.2f`", expected, total)
+	}
+
+	return nil
 }
 
 func lastBasketID(ctx context.Context) (string, error) {
