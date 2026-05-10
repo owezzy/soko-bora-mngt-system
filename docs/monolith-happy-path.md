@@ -30,9 +30,21 @@ Start the monolith and infrastructure first, then run:
 go test -tags e2e ./testing/e2e/... -mono
 ```
 
+For the single seeded kiosk proof that now serves as the minimum milestone check, run:
+
+```bash
+go test -tags e2e ./testing/e2e/... -run TestEndToEnd -mono -godog.tags=@demo-milestone-proof
+```
+
+## Canonical seeded kiosk proof
+
+The scenario `Seeded kiosk happy path completes end to end` in `testing/e2e/features/kiosk/shopping.feature` is the canonical proof for the monolith-first kiosk milestone.
+
+It is the one scenario intended to prove that the seeded kiosk demo is reproducible from startup state through final backend completion.
+
 ## What the proof covers
 
-The seeded scenario in `testing/e2e/features/orders/processing.feature` verifies that:
+The seeded kiosk proof verifies that:
 
 1. a seeded demo customer can start a basket
 2. seeded demo products can be added and checked out
