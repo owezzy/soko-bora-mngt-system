@@ -47,9 +47,13 @@ func Root(ctx context.Context, svc system.Service) (err error) {
 		postgresotel.Trace(svc.DB()),
 		grpc.NewCustomerRepository(svc.Config().Rpc.Service(constants.CustomersServiceName)),
 	)
+	notifications := postgres.NewNotificationRepository(
+		constants.NotificationsTableName,
+		postgresotel.Trace(svc.DB()),
+	)
 
 	// setup application
-	app := application.New(customers)
+	app := application.New(customers, notifications)
 	integrationEventHandlers := handlers.NewIntegrationEventHandlers(
 		reg, app, customers,
 		tm.InboxHandler(inboxStore),

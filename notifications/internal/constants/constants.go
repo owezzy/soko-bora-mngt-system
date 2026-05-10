@@ -37,4 +37,5 @@ const (
 	SagasTableName     = ServiceName + ".sagas"
 
 	CustomersCacheTableName = ServiceName + ".customers_cache"
+	NotificationsTableName  = ServiceName + ".notifications"
 )
