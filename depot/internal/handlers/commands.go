@@ -59,6 +59,8 @@ func (h commandHandlers) HandleCommand(ctx context.Context, cmd ddd.Command) (re
 		return h.doCreateShoppingList(ctx, cmd)
 	case depotpb.CancelShoppingListCommand:
 		return h.doCancelShoppingList(ctx, cmd)
+	case depotpb.InitiateShoppingCommand:
+		return h.doInitiateShopping(ctx, cmd)
 	}
 
 	return nil, nil

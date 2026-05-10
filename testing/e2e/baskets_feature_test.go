@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/cucumber/messages-go/v16"
 	"github.com/cucumber/godog"
 	"github.com/go-openapi/strfmt"
 	"github.com/stackus/errors"
@@ -15,6 +16,7 @@ import (
 	"github.com/owezzy/soko-bora-mngt-system/baskets/basketsclient/basket"
 	"github.com/owezzy/soko-bora-mngt-system/baskets/basketsclient/item"
 	"github.com/owezzy/soko-bora-mngt-system/baskets/basketsclient/models"
+	"github.com/owezzy/soko-bora-mngt-system/internal/demo"
 )
 
 type basketIDKey struct{}
@@ -40,12 +42,15 @@ func (c *basketsFeature) init(cfg featureConfig) (err error) {
 
 func (c *basketsFeature) register(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I start a new basket$`, c.iStartANewBasket)
+	ctx.Step(`^I start a new basket for the seeded demo customer$`, c.iStartANewBasketForTheSeededDemoCustomer)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the basket (?:was|is) started$`, c.expectTheBasketWasStarted)
 
 	ctx.Step(`^I add the items$`, c.iAddTheItems)
-	ctx.Step(`^(?:I )?(?:ensure |expect )?the items (?:were|are) added$`, c.expectTheItemsWereAdded)
+	ctx.Step(`^I add the seeded demo items$`, c.iAddTheSeededDemoItems)
 	ctx.Step(`^I check out the basket$`, c.iCheckOutTheBasket)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the basket (?:was|is) checked out$`, c.expectTheBasketWasCheckedOut)
+	ctx.Step(`^I fetch the basket snapshot$`, c.iFetchTheBasketSnapshot)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?the items (?:were|are) added$`, c.expectTheItemsWereAdded)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the current basket has (\d+) item(?:s)?$`, c.expectTheCurrentBasketHasItems)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the current basket total is "([^"]*)"$`, c.expectTheCurrentBasketTotalIs)
 }
@@ -77,6 +82,11 @@ func (c *basketsFeature) iStartANewBasket(ctx context.Context) (context.Context,
 		return ctx, nil
 	}
 	return context.WithValue(ctx, basketIDKey{}, resp.Payload.ID), nil
+}
+
+func (c *basketsFeature) iStartANewBasketForTheSeededDemoCustomer(ctx context.Context) (context.Context, error) {
+	ctx = context.WithValue(ctx, customerIDKey{}, demo.Spec().Customer.ID)
+	return c.iStartANewBasket(ctx)
 }
 
 func (c *basketsFeature) expectTheBasketWasStarted(ctx context.Context) error {
@@ -117,6 +127,19 @@ func (c *basketsFeature) iAddTheItems(ctx context.Context, table *godog.Table) (
 	return ctx, nil
 }
 
+func (c *basketsFeature) iAddTheSeededDemoItems(ctx context.Context) (context.Context, error) {
+	ctx = addProduct(ctx, demo.Spec().Stores[0].Products[0].ID, demo.Spec().Stores[0].Products[0].Name)
+	ctx = addProduct(ctx, demo.Spec().Stores[1].Products[0].ID, demo.Spec().Stores[1].Products[0].Name)
+
+	table := &godog.Table{Rows: []*messages.PickleTableRow{
+		{Cells: []*messages.PickleTableCell{{Value: "Name"}, {Value: "Quantity"}}},
+		{Cells: []*messages.PickleTableCell{{Value: demo.Spec().Stores[0].Products[0].Name}, {Value: "2"}}},
+		{Cells: []*messages.PickleTableCell{{Value: demo.Spec().Stores[1].Products[0].Name}, {Value: "1"}}},
+	}}
+
+	return c.iAddTheItems(ctx, table)
+}
+
 func (c *basketsFeature) expectTheItemsWereAdded(ctx context.Context) error {
 	if err := lastResponseWas(ctx, &item.AddItemOK{}); err != nil {
 		return err
@@ -138,7 +161,12 @@ func (c *basketsFeature) iCheckOutTheBasket(ctx context.Context) (context.Contex
 	resp, err := c.client.Basket.CheckoutBasket(basket.NewCheckoutBasketParams().WithID(basketID).WithBody(&models.BasketServiceCheckoutBasketBody{
 		PaymentID: paymentID,
 	}))
-	return setLastResponseAndError(ctx, resp, err), nil
+	ctx = setLastResponseAndError(ctx, resp, err)
+	if err != nil {
+		return ctx, nil
+	}
+
+	return ctx, nil
 }
 
 func (c *basketsFeature) expectTheBasketWasCheckedOut(ctx context.Context) error {
@@ -147,6 +175,25 @@ func (c *basketsFeature) expectTheBasketWasCheckedOut(ctx context.Context) error
 	}
 
 	return nil
+}
+
+func (c *basketsFeature) iFetchTheBasketSnapshot(ctx context.Context) (context.Context, error) {
+	basketID, err := lastBasketID(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	resp, err := c.client.Basket.GetBasket(basket.NewGetBasketParams().WithID(basketID))
+	ctx = setLastResponseAndError(ctx, resp, err)
+	if err != nil {
+		return ctx, nil
+	}
+
+	if resp.Payload == nil || resp.Payload.Basket == nil {
+		return ctx, errors.ErrNotFound.Msg("basket snapshot was empty")
+	}
+
+	return setCurrentBasketItems(ctx, resp.Payload.Basket.Items), nil
 }
 
 func (c *basketsFeature) expectTheCurrentBasketHasItems(ctx context.Context, expected int) error {
@@ -173,37 +220,6 @@ func (c *basketsFeature) expectTheCurrentBasketTotalIs(ctx context.Context, expe
 	}
 
 	return nil
-}
-
-func currentBasketItems(ctx context.Context) ([]*models.BasketspbItem, error) {
-	basketID, err := lastBasketID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := basketsclient.New(e2eTransport, strfmt.Default).Basket.GetBasket(basket.NewGetBasketParams().WithID(basketID))
-	if err != nil {
-		return nil, err
-	}
-	if resp.Payload == nil || resp.Payload.Basket == nil {
-		return nil, errors.ErrNotFound.Msg("basket payload was empty")
-	}
-
-	return resp.Payload.Basket.Items, nil
-}
-
-func currentBasketTotal(ctx context.Context) (float64, error) {
-	items, err := currentBasketItems(ctx)
-	if err != nil {
-		return 0, err
-	}
-
-	var total float64
-	for _, item := range items {
-		total += item.ProductPrice * float64(item.Quantity)
-	}
-
-	return total, nil
 }
 
 func lastBasketID(ctx context.Context) (string, error) {

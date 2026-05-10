@@ -6,12 +6,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/cucumber/godog"
 	"github.com/go-openapi/strfmt"
 	"github.com/stackus/errors"
 
 	"github.com/owezzy/soko-bora-mngt-system/payments/paymentsclient"
+	"github.com/owezzy/soko-bora-mngt-system/payments/paymentsclient/invoice"
 	"github.com/owezzy/soko-bora-mngt-system/payments/paymentsclient/models"
 	"github.com/owezzy/soko-bora-mngt-system/payments/paymentsclient/payment"
 )
@@ -45,18 +47,21 @@ func (c *paymentsFeature) register(ctx *godog.ScenarioContext) {
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the authorized payment id is available$`, c.expectTheAuthorizedPaymentIDIsAvailable)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the authorized payment belongs to the current customer$`, c.expectTheAuthorizedPaymentBelongsToTheCurrentCustomer)
 	ctx.Step(`^(?:I )?(?:ensure |expect )?the authorized payment amount is "([^"]*)"$`, c.expectTheAuthorizedPaymentAmountIs)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?an invoice exists for the checked out basket$`, c.expectAnInvoiceExistsForTheCheckedOutBasket)
+	ctx.Step(`^I pay the invoice for the checked out basket$`, c.iPayTheInvoiceForTheCheckedOutBasket)
+	ctx.Step(`^(?:I )?(?:ensure |expect )?the invoice status is "([^"]*)"$`, c.expectTheInvoiceStatusIs)
 	}
 
 func (c *paymentsFeature) reset() {
 	truncate := func(tableName string) {
-		_, _ = c.db.Exec(fmt.Sprintf("TRUNCATE %s", tableName))
+		_, _ = c.db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tableName))
 	}
 
 	truncate("payments.payments")
 	truncate("payments.invoices")
 	truncate("payments.inbox")
 	truncate("payments.outbox")
-	}
+}
 
 func (c *paymentsFeature) iAuthorizePaymentForTheBasketTotal(ctx context.Context) (context.Context, error) {
 	customerID, err := lastCustomerID(ctx)
@@ -161,6 +166,64 @@ func (c *paymentsFeature) expectTheAuthorizedPaymentAmountIs(ctx context.Context
 	}
 
 	return nil
+}
+
+func (c *paymentsFeature) iPayTheInvoiceForTheCheckedOutBasket(ctx context.Context) (context.Context, error) {
+	invoiceID, err := c.waitForInvoiceID(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	resp, err := c.client.Invoice.PayInvoice(invoice.NewPayInvoiceParams().WithID(invoiceID))
+	ctx = setLastResponseAndError(ctx, resp, err)
+	if err != nil {
+		return ctx, nil
+	}
+
+	return ctx, nil
+}
+
+func (c *paymentsFeature) expectAnInvoiceExistsForTheCheckedOutBasket(ctx context.Context) error {
+	_, err := c.waitForInvoiceID(ctx)
+	return err
+}
+
+func (c *paymentsFeature) expectTheInvoiceStatusIs(ctx context.Context, expected string) error {
+	invoiceID, err := c.waitForInvoiceID(ctx)
+	if err != nil {
+		return err
+	}
+
+	deadline := time.Now().Add(orderPropagationTimeout)
+	for time.Now().Before(deadline) {
+		var status string
+		row := c.db.QueryRow("SELECT status FROM payments.invoices WHERE id = $1", invoiceID)
+		if err = row.Scan(&status); err == nil && status == expected {
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	return errors.ErrUnknown.Msgf("invoice `%s` did not reach status `%s` before timeout", invoiceID, expected)
+}
+
+func (c *paymentsFeature) waitForInvoiceID(ctx context.Context) (string, error) {
+	orderID, err := lastBasketID(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	deadline := time.Now().Add(orderPropagationTimeout)
+	for time.Now().Before(deadline) {
+		var invoiceID string
+		row := c.db.QueryRow("SELECT id FROM payments.invoices WHERE order_id = $1", orderID)
+		if err = row.Scan(&invoiceID); err == nil {
+			return invoiceID, nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	return "", errors.ErrUnknown.Msgf("invoice for order `%s` was not created before timeout", orderID)
 }
 
 func lastPaymentID(ctx context.Context) (string, error) {

@@ -34,7 +34,7 @@ func (h CompleteShoppingListHandler) CompleteShoppingList(ctx context.Context, c
 	}
 
 	if err = h.shoppingLists.Update(ctx, list); err != nil {
-		return nil
+		return err
 	}
 
 	// publish domain events

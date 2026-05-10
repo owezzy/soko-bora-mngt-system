@@ -6,12 +6,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"math"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/cucumber/messages-go/v16"
 	"github.com/cucumber/godog"
 	"github.com/go-openapi/runtime/client"
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -20,6 +20,7 @@ import (
 )
 
 var useMonoDB = flag.Bool("mono", false, "Use mono DB resources")
+var godogTags = flag.String("godog.tags", "", "Filter scenarios by tag expression")
 
 var assist = assistdog.NewDefault()
 var e2eTransport *client.Runtime
@@ -78,6 +79,7 @@ func TestEndToEnd(t *testing.T) {
 	}(
 		&basketsFeature{},
 		&customersFeature{},
+		&notificationsFeature{},
 		&ordersFeature{},
 		&paymentsFeature{},
 		&storesFeature{},
@@ -103,23 +105,40 @@ func TestEndToEnd(t *testing.T) {
 				f.register(ctx)
 			}
 			ctx.Before(func(ctx context.Context, s *godog.Scenario) (context.Context, error) {
+				seededDemo := scenarioHasTag(s, "@seeded-demo")
 				for _, f := range features {
 					f.reset()
 				}
+				if seededDemo && cfg.useMonoDB {
+					if err := reseedSeededDemoMonolithState(ctx); err != nil {
+						return ctx, err
+					}
+				}
 
-				return ctx, nil
+				return setSeededDemoScenario(ctx, seededDemo), nil
 			})
 		},
 		Options: &godog.Options{
 			Format:    "pretty",
 			Paths:     featurePaths,
 			Randomize: -1,
+			Tags:      *godogTags,
 		},
 	}
 
 	if status := suite.Run(); status != 0 {
 		t.Error("end to end feature test failed with status:", status)
 	}
+}
+
+func scenarioHasTag(s *messages.Pickle, tag string) bool {
+	for _, pickleTag := range s.Tags {
+		if pickleTag.Name == tag {
+			return true
+		}
+	}
+
+	return false
 }
 
 func iReceiveAError(ctx context.Context, msg string) error {
@@ -167,8 +186,4 @@ func lastError(ctx context.Context) error {
 		return nil
 	}
 	return e.(error)
-}
-
-func nearlyEqualFloat64(left, right float64) bool {
-	return math.Abs(left-right) < 0.0001
 }

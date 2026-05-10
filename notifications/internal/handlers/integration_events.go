@@ -77,6 +77,8 @@ func (h integrationHandlers[T]) HandleEvent(ctx context.Context, event T) (err e
 		return h.onOrderReadied(ctx, event)
 	case orderingpb.OrderCanceledEvent:
 		return h.onOrderCanceled(ctx, event)
+	case orderingpb.OrderCompletedEvent:
+		return h.onOrderCompleted(ctx, event)
 	}
 
 	return nil
@@ -111,6 +113,14 @@ func (h integrationHandlers[T]) onOrderReadied(ctx context.Context, event T) err
 func (h integrationHandlers[T]) onOrderCanceled(ctx context.Context, event T) error {
 	payload := event.Payload().(*orderingpb.OrderCanceled)
 	return h.app.NotifyOrderCanceled(ctx, application.OrderCanceled{
+		OrderID:    payload.GetId(),
+		CustomerID: payload.GetCustomerId(),
+	})
+}
+
+func (h integrationHandlers[T]) onOrderCompleted(ctx context.Context, event T) error {
+	payload := event.Payload().(*orderingpb.OrderCompleted)
+	return h.app.NotifyOrderCompleted(ctx, application.OrderCompleted{
 		OrderID:    payload.GetId(),
 		CustomerID: payload.GetCustomerId(),
 	})
