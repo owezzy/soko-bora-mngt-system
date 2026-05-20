@@ -1,0 +1,141 @@
+@startuml
+!theme plain
+skinparam dpi 300
+skinparam defaultFontName Jetbrains Mono
+skinparam shadowing false
+skinparam linetype ortho
+top to bottom direction
+
+title MallBots App Workflow Wireframe
+
+rectangle "Boot & Demo Setup" as boot {
+  rectangle "Start monolith\nmake soko-bora" as start_monolith
+  rectangle "Seed deterministic demo data\nDemo Shopper\nFresh Harvest Grocers\nPantry Corner" as seed_demo
+  rectangle "Start Angular kiosk\nnpm start" as start_kiosk
+}
+
+rectangle "Auth Entry Flow" as auth {
+  rectangle "Open app\n/ redirects to /kiosk" as open_app
+  rectangle "Auth guard check" as guard_check
+  rectangle "Sign in" as sign_in
+  rectangle "Redirect to /kiosk" as signed_in_redirect
+}
+
+rectangle "Primary Kiosk Journey" as kiosk {
+  rectangle "Kiosk home\nload customer + store catalog" as kiosk_home
+  rectangle "Browse products" as browse_products
+  rectangle "Add items to basket" as add_items
+  rectangle "Remove items from basket" as remove_items
+  rectangle "View basket snapshot\nsee running total" as basket_snapshot
+  rectangle "Authorize payment" as authorize_payment
+  rectangle "Checkout basket" as checkout_basket
+  rectangle "Order submitted" as order_submitted
+  rectangle "Refresh order status" as refresh_order
+  rectangle "Live status panel\nApproved -> Ready For Pickup -> Completed" as live_status
+  rectangle "Product lookup error\nproduct was not located" as product_error
+}
+
+rectangle "Backend Order & Fulfillment Flow" as backend {
+  rectangle "Basket started" as basket_started
+  rectangle "Items persisted" as items_persisted
+  rectangle "Payment record created\nstatus: authorized" as payment_record
+  rectangle "Create-order saga" as create_order_saga
+  rectangle "Order exists\nstatus: approved" as approved_order
+  rectangle "Depot shopping list\nstatus: available" as shopping_list_available
+  rectangle "Assign to bot\ndemo-bot-001" as assign_bot
+  rectangle "Shopping list\nstatus: assigned" as shopping_list_assigned
+  rectangle "Complete shopping list" as complete_list
+  rectangle "Shopping list\nstatus: completed" as shopping_list_completed
+  rectangle "Order status: ready" as ready_order
+  rectangle "Invoice created" as invoice_created
+  rectangle "Pay invoice" as pay_invoice
+  rectangle "Invoice paid" as invoice_paid
+  rectangle "Order completed" as completed_order
+}
+
+rectangle "Notifications & Search Projection" as projections {
+  rectangle "\"ready\" notification persisted" as ready_notification
+  rectangle "Search projection\nReady For Pickup" as ready_projection
+  rectangle "\"created\" notification persisted" as created_notification
+  rectangle "Search projection\nCompleted" as completed_projection
+}
+
+rectangle "Documented Setup/Admin Flows" as admin {
+  rectangle "Register customer" as register_customer
+  rectangle "Create store" as create_store
+  rectangle "Create product" as create_product
+}
+
+start_monolith --> seed_demo
+seed_demo --> start_kiosk
+start_kiosk --> open_app
+
+open_app --> guard_check
+guard_check --> sign_in : not authenticated
+sign_in --> signed_in_redirect
+guard_check --> signed_in_redirect : authenticated
+signed_in_redirect --> kiosk_home
+
+kiosk_home --> browse_products
+browse_products --> add_items
+add_items --> basket_snapshot
+browse_products --> product_error : product missing
+add_items --> remove_items
+remove_items --> basket_snapshot
+basket_snapshot --> authorize_payment
+authorize_payment --> checkout_basket
+checkout_basket --> order_submitted
+order_submitted --> refresh_order
+refresh_order --> live_status
+
+checkout_basket --> basket_started
+basket_started --> items_persisted
+items_persisted --> payment_record
+payment_record --> create_order_saga
+create_order_saga --> approved_order
+approved_order --> shopping_list_available
+shopping_list_available --> assign_bot
+assign_bot --> shopping_list_assigned
+shopping_list_assigned --> complete_list
+complete_list --> shopping_list_completed
+shopping_list_completed --> ready_order
+ready_order --> invoice_created
+invoice_created --> pay_invoice
+pay_invoice --> invoice_paid
+invoice_paid --> completed_order
+
+ready_order --> ready_notification
+ready_order --> ready_projection
+ready_projection --> live_status
+invoice_paid --> created_notification
+invoice_paid --> completed_projection
+completed_projection --> live_status
+
+register_customer --> kiosk_home
+create_store --> browse_products
+create_product --> browse_products
+
+note right of auth
+  Documented routes:
+  - / -> /kiosk
+  - unauthenticated users go to /sign-in
+  - successful sign-in returns to kiosk
+end note
+
+note right of kiosk
+  Customer-visible wireframe path from README:
+  browse -> basket -> authorize payment -> checkout ->
+  refresh live order status
+end note
+
+note right of backend
+  Backed by baskets, ordering, depot,
+  payments, notifications, and search.
+end note
+
+note bottom of admin
+  These flows are documented in E2E features,
+  but are not part of the seeded kiosk happy path.
+end note
+
+@enduml
